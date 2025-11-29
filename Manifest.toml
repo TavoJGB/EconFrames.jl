@@ -1,0 +1,10 @@
+# This file is machine-generated - editing it directly is not advised
+
+julia_version = "1.12.1"
+manifest_format = "2.0"
+project_hash = "32551f29e1422adedc0c2bfe6051a2462f304116"
+
+[[deps.EconFrames]]
+path = "."
+uuid = "d0f1779d-20ea-47f6-8e33-fa6a588e0d79"
+version = "1.0.0-DEV"
