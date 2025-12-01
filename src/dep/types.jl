@@ -18,9 +18,6 @@ struct Quantile <: DataSubject end
 
 # Source of the data
 abstract type DataSource end
-struct PSID <: DataSource end
-struct SCF <: DataSource end
-struct EFF <: DataSource end
 
 # Good type (for sector-specific inflation adjustments)
 abstract type GoodType end
@@ -28,14 +25,6 @@ abstract type SomeGood <: GoodType end
 struct AnyGood <: GoodType end
 struct ConsumptionGood <: SomeGood end
 struct Housing <: SomeGood end
-
-# Housing tenure status
-@enum TenureStatus begin
-    Owner = 1
-    Renter = 5
-    NoTenure = 9
-    NoHead = 10
-end
 
 
 

@@ -14,16 +14,17 @@ module EconFrames
         export EconVariable, EconScalar
         export MonetaryVariable, MonetaryScalar
         export EconFrame, EconCrossSection, EconRepeatedCrossSection
-        export PSID, SCF, EFF
-        export frequency, Annual, Quarterly, Monthly
-        export subject, Household, Individual, Quantile
-        export currency
+        export DataSource
+        export DataFrequency, frequency, Annual, Quarterly, Monthly
+        export DataSubject, subject, Household, Individual, Quantile
+        export Currency, currency
         export NominalEUR, NominalUSD
         export RealEUR, RealUSD
         export get_dates
+        export monetary_variable!
         # export TenureStatus, Owner, Renter, NoTenure
     include(joinpath(BASE_FOLDER, "src", "dep", "inflation.jl"))
-        export CPI, AnyGood, ConsumptionGood, Housing
+        export CPI, GoodType, AnyGood, ConsumptionGood, Housing
         export to_real, to_nominal, rebase
         export to_real!, to_nominal!, rebase!
     include(joinpath(BASE_FOLDER, "src", "dep", "groups.jl"))
