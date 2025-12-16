@@ -13,7 +13,6 @@ mutable struct EconRepeatedCrossSection{Ds<:DataSource, Dl<:DataSubject, Df<:Dat
     subject::Dl
     frequency::Df
     currency::Currency      # Currency for monetary variables (not parametric to allow mutation)
-    N::Int                  # Number of observations
     # Key columns
     date_var::Union{Symbol,String}
     weight_var::Union{Symbol,String}
@@ -22,9 +21,8 @@ mutable struct EconRepeatedCrossSection{Ds<:DataSource, Dl<:DataSubject, Df<:Dat
         data::DataFrame, source::Ds, subject::Dl, frequency::Df, date_var::Union{Symbol,String};
         currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
     ) where {Ds<:DataSource, Dl<:DataSubject, Df<:DataFrequency}
-        N = nrow(data)
         data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
-        return new{Ds, Dl, Df}(data, source, subject, frequency, currency, N, date_var, weight_var)
+        return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, weight_var)
     end
 end
 mutable struct EconCrossSection{Ds<:DataSource, Dl<:DataSubject} <: EconFrame
@@ -34,7 +32,6 @@ mutable struct EconCrossSection{Ds<:DataSource, Dl<:DataSubject} <: EconFrame
     source::Ds
     subject::Dl
     currency::Currency      # Currency for monetary variables (not parametric to allow mutation)
-    N::Int                  # Number of observations
     date::Date
     # Key columns
     weight_var::Union{Symbol,String}
@@ -43,9 +40,8 @@ mutable struct EconCrossSection{Ds<:DataSource, Dl<:DataSubject} <: EconFrame
         data::DataFrame, source::Ds, subject::Dl, date::Date;
         currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
     ) where {Ds<:DataSource, Dl<:DataSubject}
-        N = nrow(data)
         data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
-        return new{Ds, Dl}(data, source, subject, currency, N, date, weight_var)
+        return new{Ds, Dl}(data, source, subject, currency, date, weight_var)
     end
     EconCrossSection(data::DataFrame, source::DataSource, subject::DataSubject, date; kwargs...) = EconCrossSection(data, source, subject, Date(date); kwargs...)
 end
@@ -172,7 +168,6 @@ function df_function_keeping_metadata!(ef::EconFrame, df_func::Function, args...
     saved_meta = df_save_metadata(ef)
     # Perform function
     df_func(ef.data, args...; kwargs...)
-    ef.N = nrow(ef.data)
     # Restore metadata for remaining columns
     df_restore_metadata!(ef, saved_meta)
     return nothing
@@ -213,7 +208,7 @@ function Base.show(io::IO, ef::EconRepeatedCrossSection{Ds,Dl,Df}) where {Ds,Dl,
     print(io, "$(ef.source), $(ef.subject), $(ef.frequency), ")
     print(io, "dates: $date_range, ")
     print(io, "currency: $curr_str, ")
-    print(io, "$(ef.N) observations, ")
+    print(io, "$(nrow(ef)) observations, ")
     print(io, "$(ncol(ef.data))×$(nrow(ef.data)) DataFrame\n")
     show(io, ef.data)
 end
