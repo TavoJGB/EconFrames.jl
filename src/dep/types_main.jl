@@ -217,3 +217,29 @@ function Base.show(io::IO, ef::EconRepeatedCrossSection{Ds,Dl,Df}) where {Ds,Dl,
     print(io, "$(ncol(ef.data))×$(nrow(ef.data)) DataFrame\n")
     show(io, ef.data)
 end
+
+
+
+#==========================================================================
+    ECONSET
+    Struct to hold multiple EconFrames. For example, when there are
+    variables at the individual and household levels.
+==========================================================================#
+
+struct EconSet
+    efs::Dict{Symbol,<:EconFrame}
+    cross_id::SymmetricDict{Symbol, <:Any}     # Links between frames
+    # Constructors
+    function EconSet(efs::Dict{Symbol,<:EconFrame}, cross_id::SymmetricDict{Symbol, <:Any})
+        # Verify that all cross_id keys belong to efs
+        for (a, b) in keys(cross_id)
+            @assert a in keys(efs) "EconFrame $a not found in EconSet"
+            @assert b in keys(efs) "EconFrame $b not found in EconSet"
+        end
+        new(efs, cross_id)
+    end
+    EconSet(efs::Dict{Symbol,<:EconFrame}) = new(efs, SymmetricDict{Symbol, Symbol}())
+    EconSet(efs::Dict{Symbol,<:EconFrame}, cid::Dict{Tuple{Symbol,Symbol}, <:Any}) = EconSet(efs, SymmetricDict(cid))
+    EconSet(efs::Vector{<:EconFrame}, names::Vector{<:Symbol}, args...) = new(Dict(names .=> efs), args...)
+    EconSet(efs::Tuple, args...) = new(Dict(efs), args...)
+end

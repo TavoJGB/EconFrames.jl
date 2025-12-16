@@ -14,8 +14,9 @@ module EconFrames
         import EconVariables: currency_string
 
     # Package dependencies
+    include(joinpath(BASE_FOLDER, "src", "dep", "types_aux.jl"))
     include(joinpath(BASE_FOLDER, "src", "dep", "types_main.jl"))
-        export EconFrame, EconCrossSection, EconRepeatedCrossSection
+        export EconFrame, EconCrossSection, EconRepeatedCrossSection, EconSet
         # export TenureStatus, Owner, Renter, NoTenure
     include(joinpath(BASE_FOLDER, "src", "dep", "compat_inflation.jl"))
     include(joinpath(BASE_FOLDER, "src", "dep", "groups.jl"))
