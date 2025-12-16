@@ -243,3 +243,5 @@ struct EconSet
     EconSet(efs::Vector{<:EconFrame}, names::Vector{<:Symbol}, args...) = new(Dict(names .=> efs), args...)
     EconSet(efs::Tuple, args...) = new(Dict(efs), args...)
 end
+# Methods
+getindex(es::EconSet, key::Symbol) = es.efs[key]
