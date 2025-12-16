@@ -83,7 +83,7 @@ uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 version = "0.9.5"
 
 [[deps.EconFrames]]
-deps = ["CSV", "DataFrames", "Dates", "EconStats", "EconVariables", "Parameters", "StatsBase"]
+deps = ["CSV", "DataFrames", "Dates", "EconStats", "EconVariables", "Parameters", "Reexport", "StatsBase"]
 path = "."
 uuid = "d0f1779d-20ea-47f6-8e33-fa6a588e0d79"
 version = "1.0.0-DEV"

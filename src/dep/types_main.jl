@@ -157,10 +157,12 @@ DataFrames.ncol(ef::EconFrame) = ncol(ef.data)
 DataFrames.colmetadata(ef::EconFrame, args...) = DataFrames.colmetadata(ef.data, args...)
 DataFrames.colmetadatakeys(ef::EconFrame, args...) = DataFrames.colmetadatakeys(ef.data, args...)
 DataFrames.insertcols!(ef::EconFrame, args...) = DataFrames.insertcols!(ef.data, args...)
-DataFrames.select(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.select(ef.data, args...; kwargs...), kwargs...)
+DataFrames.select(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.select(ef.data, args...; kwargs...))
 DataFrames.select!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.select!, args...)
-DataFrames.subset(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.subset(ef.data, args...), kwargs...)
+DataFrames.subset(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.subset(ef.data, args...; kwargs...))
 DataFrames.subset!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.subset!, args...)
+DataFrames.leftjoin(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.leftjoin(ef.data, args...; kwargs...))
+DataFrames.leftjoin(ef1::EconFrame, ef2::EconFrame, args...; kwargs...) = reconstruct(ef1;data=DataFrames.leftjoin(ef1.data, ef2.data, args...; kwargs...))
 
 # Auxiliary
 function df_function_keeping_metadata!(ef::EconFrame, df_func::Function, args...; kwargs...)
@@ -233,11 +235,11 @@ struct EconSet
         end
         new(efs, cross_id)
     end
-    EconSet(efs::Dict{Symbol,<:EconFrame}) = EconSet(efs, SymmetricDict{Symbol, Symbol}())
+    EconSet(efs::Dict{Symbol,<:EconFrame}) = EconSet(efs, SymmetricDict{Symbol, <:Any}())
     EconSet(efs::Dict{Symbol,<:EconFrame}, args...) = EconSet(efs, SymmetricDict(args...))
     EconSet(efs::Vector{<:EconFrame}, names::Vector{<:Symbol}, args...) = EconSet(Dict(names .=> efs), args...)
     EconSet(efs::Tuple, args...) = EconSet(Dict(efs), args...)
 end
 
 # Methods
-getindex(es::EconSet, key::Symbol) = es.efs[key]
+Base.getindex(es::EconSet, key::Symbol) = es.efs[key]

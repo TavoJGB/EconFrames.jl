@@ -2,22 +2,42 @@ module EconFrames
 
     BASE_FOLDER = dirname(@__DIR__)
 
-    # External dependencies
+    #==========================================================================
+        EXTERNAL DEPENDENCIES
+    ==========================================================================#
+
     using CSV, DataFrames
     using Dates
     using Parameters        # unpack
 
-    # Other local
+
+
+    #==========================================================================
+        LOCAL DEPENDENCIES
+    ==========================================================================#
+
     using Reexport                      # @reexport
     @reexport using EconStats           # statistics
     @reexport using EconVariables       # vectors with economic metadata
         import EconVariables: currency_string
+        import EconVariables: build_cpi_dict, validate_cpis_unique
 
-    # Package dependencies
+
+    
+    #==========================================================================
+        PACKAGE DEPENDENCIES
+    ==========================================================================#
+
+    # Types
     include(joinpath(BASE_FOLDER, "src", "dep", "types_aux.jl"))
     include(joinpath(BASE_FOLDER, "src", "dep", "types_main.jl"))
         export EconFrame, EconCrossSection, EconRepeatedCrossSection, EconSet
         # export TenureStatus, Owner, Renter, NoTenure
+
+    # Methods
+    include(joinpath(BASE_FOLDER, "src", "dep", "collapse.jl"))
+        export collapse, propagate
+        export only_head, weighted_mean, weighted_sum
     include(joinpath(BASE_FOLDER, "src", "dep", "compat_inflation.jl"))
     include(joinpath(BASE_FOLDER, "src", "dep", "groups.jl"))
         export assign_groups!, groupby!, assign_quantiles!
