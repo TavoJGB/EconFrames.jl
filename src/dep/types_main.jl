@@ -238,10 +238,11 @@ struct EconSet
         end
         new(efs, cross_id)
     end
-    EconSet(efs::Dict{Symbol,<:EconFrame}) = new(efs, SymmetricDict{Symbol, Symbol}())
-    EconSet(efs::Dict{Symbol,<:EconFrame}, cid::Dict{Tuple{Symbol,Symbol}, <:Any}) = EconSet(efs, SymmetricDict(cid))
-    EconSet(efs::Vector{<:EconFrame}, names::Vector{<:Symbol}, args...) = new(Dict(names .=> efs), args...)
-    EconSet(efs::Tuple, args...) = new(Dict(efs), args...)
+    EconSet(efs::Dict{Symbol,<:EconFrame}) = EconSet(efs, SymmetricDict{Symbol, Symbol}())
+    EconSet(efs::Dict{Symbol,<:EconFrame}, args...) = EconSet(efs, SymmetricDict(args...))
+    EconSet(efs::Vector{<:EconFrame}, names::Vector{<:Symbol}, args...) = EconSet(Dict(names .=> efs), args...)
+    EconSet(efs::Tuple, args...) = EconSet(Dict(efs), args...)
 end
+
 # Methods
 getindex(es::EconSet, key::Symbol) = es.efs[key]
