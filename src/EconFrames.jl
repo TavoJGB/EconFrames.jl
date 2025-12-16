@@ -2,33 +2,23 @@ module EconFrames
 
     BASE_FOLDER = dirname(@__DIR__)
 
+    # External dependencies
     using CSV, DataFrames
     using Dates
     using Parameters        # unpack
-    using StatsBase         # weighted mean etc.
-    using StatsBase: dot
-        export mean, std, median, dot
 
-    # Load dependencies
-    include(joinpath(BASE_FOLDER, "src", "dep", "types.jl"))
-        export EconVariable, EconScalar
-        export MonetaryVariable, MonetaryScalar
+    # Other local
+    using Reexport                      # @reexport
+    @reexport using EconStats           # statistics
+    @reexport using EconVariables       # vectors with economic metadata
+        import EconVariables: currency_string
+
+    # Package dependencies
+    include(joinpath(BASE_FOLDER, "src", "dep", "types_main.jl"))
         export EconFrame, EconCrossSection, EconRepeatedCrossSection
-        export DataSource
-        export DataFrequency, frequency, Annual, Quarterly, Monthly
-        export DataSubject, subject, Household, Individual, Quantile
-        export Currency, currency
-        export NominalEUR, NominalUSD
-        export RealEUR, RealUSD
-        export get_dates
-        export monetary_variable!
         # export TenureStatus, Owner, Renter, NoTenure
-    include(joinpath(BASE_FOLDER, "src", "dep", "inflation.jl"))
-        export CPI, GoodType, AnyGood, ConsumptionGood, Housing
-        export to_real, to_nominal, rebase
-        export to_real!, to_nominal!, rebase!
+    include(joinpath(BASE_FOLDER, "src", "dep", "compat_inflation.jl"))
     include(joinpath(BASE_FOLDER, "src", "dep", "groups.jl"))
         export assign_groups!, groupby!, assign_quantiles!
-    include(joinpath(BASE_FOLDER, "src", "dep", "stats.jl"))
 
 end
