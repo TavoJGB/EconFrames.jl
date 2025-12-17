@@ -5,7 +5,7 @@
 
 """
     collapse(es::EconSet, target::Symbol, source::Symbol, ops...; 
-             by::Union{Symbol,Nothing}=nothing)
+             by::Union{Symbol,Vector{Symbol}}=nothing)
 
 Collapse data from a finer level (source) to a coarser level (target) by aggregating variables.
 
@@ -66,7 +66,7 @@ collapse(es, :hh, :ii,
 """
 function collapse(
     es::EconSet, target::Symbol, source::Symbol, ops...;
-    by::Union{Symbol,Vector{Symbol},Nothing}=es.cross_id[target, source]
+    by::Union{Symbol,Vector{Symbol}}=es.cross_id[target, source]
 )::EconFrame    
     # Get source and target frames
     ef_source = es.efs[source]
@@ -114,7 +114,7 @@ end
 
 
 #==========================================================================
-    COMBINE FUNCTIONS
+    COLLAPSE FUNCTIONS
     Helper functions for common aggregations
 ==========================================================================#
 
