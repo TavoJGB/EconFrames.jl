@@ -46,7 +46,6 @@ function propagate(
     # Process variable specifications
     source_vars = Symbol[]
     rename_map = Dict{Symbol,Symbol}()
-    
     for var_spec in vars
         if var_spec isa Symbol
             push!(source_vars, var_spec)
@@ -58,8 +57,11 @@ function propagate(
         end
     end
     
+    # Save metadata from source columns before selection
+    metad=df_save_metadata(ef_source)
+    
     # Select relevant columns from source
-    cols_to_join = [link_var; source_vars]
+    cols_to_join = [by; source_vars]
     df_to_propagate = ef_source.data[!, cols_to_join]
     
     # Rename if needed
@@ -67,8 +69,9 @@ function propagate(
         df_to_propagate = rename(df_to_propagate, rename_map...)
     end
     
-    # Join to target frame
-    ef_target = leftjoin(ef_target, df_to_propagate; on=link_var, makeunique=true)
+    # Restore metadata to df_to_propagate
+    df_restore_metadata!(df_to_propagate, metad)
     
-    return nothing
+    # Join to target frame
+    return leftjoin(ef_target, df_to_propagate; on=by, makeunique=true)
 end
