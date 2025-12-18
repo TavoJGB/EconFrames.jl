@@ -39,6 +39,7 @@ module EconFrames
         export collapse, propagate
         export only_head, weighted_mean, weighted_sum
     include(joinpath(BASE_FOLDER, "src", "dep", "compat_inflation.jl"))
+        export to_real!, to_nominal!, rebase!
     include(joinpath(BASE_FOLDER, "src", "dep", "groups.jl"))
         export assign_groups!, groupby!, assign_quantiles!
 

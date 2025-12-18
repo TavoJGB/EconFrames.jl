@@ -161,10 +161,63 @@ DataFrames.select(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataF
 DataFrames.select!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.select!, args...)
 DataFrames.subset(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.subset(ef.data, args...; kwargs...))
 DataFrames.subset!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.subset!, args...)
-DataFrames.leftjoin(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.leftjoin(ef.data, args...; kwargs...))
-DataFrames.leftjoin(ef1::EconFrame, ef2::EconFrame, args...; kwargs...) = reconstruct(ef1;data=DataFrames.leftjoin(ef1.data, ef2.data, args...; kwargs...))
+function DataFrames.leftjoin(ef_L::EconFrame, df_R::DataFrame, args...; kwargs...)
+    # Save metadata from left frame
+    saved_meta_L = df_save_metadata(ef_L)
+    saved_meta_R = df_save_metadata(df_R)
+    
+    # Perform join
+    result = reconstruct(ef_L; data=DataFrames.leftjoin(ef_L.data, df_R, args...; kwargs...))
+    
+    # Restore metadata from both frames
+    df_restore_metadata!(result, saved_meta_R)
+    df_restore_metadata!(result, saved_meta_L)
+    
+    return result
+end
+function DataFrames.leftjoin(ef_L::EconFrame, ef_R::EconFrame, args...; kwargs...)
+    # Save metadata from both frames
+    saved_meta_L = df_save_metadata(ef_L)
+    saved_meta_R = df_save_metadata(ef_R)
+    
+    # Perform join
+    result = reconstruct(ef_L; data=DataFrames.leftjoin(ef_L.data, ef_R.data, args...; kwargs...))
+    
+    # Restore metadata from both frames (left takes precedence for overlapping columns)
+    df_restore_metadata!(result, saved_meta_R)
+    df_restore_metadata!(result, saved_meta_L)
+    
+    return result
+end
 
 # Auxiliary
+function df_function_keeping_metadata(df::DataFrame, df_func::Function, args...; kwargs...)
+    # Save all column metadata
+    saved_meta = df_save_metadata(df)
+    # Perform function
+    df_new = df_func(df, args...; kwargs...)
+    # Restore metadata for remaining columns
+    df_restore_metadata!(df_new, saved_meta)
+    return nothing
+end
+function df_function_keeping_metadata(ef::EconFrame, df_func::Function, args...; kwargs...)
+    # Save all column metadata
+    saved_meta = df_save_metadata(ef)
+    # Perform function
+    ef_new = reconstruct(ef; data=df_func(ef.data, args...; kwargs...))
+    # Restore metadata for remaining columns
+    df_restore_metadata!(ef_new, saved_meta)
+    return ef_new
+end
+function df_function_keeping_metadata!(df::DataFrame, df_func::Function, args...; kwargs...)
+    # Save all column metadata
+    saved_meta = df_save_metadata(df)
+    # Perform function
+    df_func(df, args...; kwargs...)
+    # Restore metadata for remaining columns
+    df_restore_metadata!(df, saved_meta)
+    return nothing
+end
 function df_function_keeping_metadata!(ef::EconFrame, df_func::Function, args...; kwargs...)
     # Save all column metadata
     saved_meta = df_save_metadata(ef)

@@ -104,8 +104,10 @@ function collapse(
     end
     
     # Group by linking variable and aggregate
+    metad = df_save_metadata(ef_source)
     gdf = groupby(ef_source, by)
-    df_collapsed = DataFrames.combine(gdf, processed_ops...)
+    df_collapsed = combine(gdf, processed_ops...)
+    df_restore_metadata!(df_collapsed, metad)
     
     # Merge collapsed data into target frame    
     return leftjoin(ef_target, df_collapsed; on=by, makeunique=true)

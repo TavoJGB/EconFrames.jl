@@ -215,7 +215,7 @@ function assign_quantiles!( ef::EconFrame, col::Symbol, thresholds::AbstractVect
         weights = ef |> get_weights
         ef.data[!, rank_col] = get_rank(ef.data[!, col], weights)
     else
-        weight_col = ef.weight_var
+        @unpack weight_var = ef;
 
         # Ranking within groups
         by_cols = by isa Symbol ? [by] : by
@@ -231,7 +231,7 @@ function assign_quantiles!( ef::EconFrame, col::Symbol, thresholds::AbstractVect
             row_indices = DataFrames.parentindices(subdf)[1]
             
             # Compute weights for this group
-            weights = isnothing(weight_col) ? ones(length(row_indices)) : subdf[!, weight_col]
+            weights = isnothing(weight_var) ? ones(length(row_indices)) : collect(subdf[!, weight_var])
             
             # Compute and assign ranks
             ef.data[row_indices, rank_col] = get_rank(subdf[!, col], weights)
@@ -366,7 +366,7 @@ function DataFrames.combine(
         df_combined = combine(gdf, args...; kwargs...)
     else
         basic_fs = (
-            :id => length => :N,
+            :weight => length => :N,
             :weight => sum => :weight
         )
         df_combined = combine(gdf, basic_fs..., args...; kwargs...)
