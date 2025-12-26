@@ -161,6 +161,8 @@ DataFrames.select(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataF
 DataFrames.select!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.select!, args...)
 DataFrames.subset(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.subset(ef.data, args...; kwargs...))
 DataFrames.subset!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.subset!, args...)
+DataFrames.rename(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.rename(ef.data, args...; kwargs...))
+DataFrames.rename!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.rename!, args...)
 function DataFrames.leftjoin(ef_L::EconFrame, df_R::DataFrame, args...; kwargs...)
     # Save metadata from left frame
     saved_meta_L = df_save_metadata(ef_L)
