@@ -226,6 +226,8 @@ function DataFrames.leftjoin(ef_L::EconFrame, ef_R::EconFrame, args...; kwargs..
     
     return result
 end
+DataFrames.dropmissing(ef::EconFrame, args...; kwargs...) = reconstruct(ef; data=DataFrames.dropmissing(ef.data, args...; kwargs...))
+DataFrames.dropmissing!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.dropmissing!, args...)
 
 # Auxiliary
 function df_function_keeping_metadata(df::DataFrame, df_func::Function, args...; kwargs...)
