@@ -25,6 +25,27 @@ mutable struct EconRepeatedCrossSection{Ds<:DataSource, Dl<:DataSubject, Df<:Dat
         return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, weight_var)
     end
 end
+mutable struct EconPanel{Ds<:DataSource, Dl<:DataSubject, Df<:DataFrequency} <: EconFrame
+    # Data
+    data::DataFrame
+    # Data characteristics
+    source::Ds
+    subject::Dl
+    frequency::Df
+    currency::Currency      # Currency for monetary variables (not parametric to allow mutation)
+    # Key columns
+    date_var::Union{Symbol,String}
+    id_var::Union{Symbol,String}
+    weight_var::Union{Symbol,String}
+    # Constructor
+    function EconPanel(
+        data::DataFrame, source::Ds, subject::Dl, frequency::Df, date_var::Union{Symbol,String}, id_var::Union{Symbol,String};
+        currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
+    ) where {Ds<:DataSource, Dl<:DataSubject, Df<:DataFrequency}
+        data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
+        return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, id_var, weight_var)
+    end
+end
 mutable struct EconCrossSection{Ds<:DataSource, Dl<:DataSubject} <: EconFrame
     # Data
     data::DataFrame
@@ -40,7 +61,6 @@ mutable struct EconCrossSection{Ds<:DataSource, Dl<:DataSubject} <: EconFrame
         data::DataFrame, source::Ds, subject::Dl, date::Date;
         currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
     ) where {Ds<:DataSource, Dl<:DataSubject}
-        data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
         return new{Ds, Dl}(data, source, subject, currency, date, weight_var)
     end
     EconCrossSection(data::DataFrame, source::DataSource, subject::DataSubject, date; kwargs...) = EconCrossSection(data, source, subject, Date(date); kwargs...)
@@ -107,8 +127,10 @@ currency(ef::EconFrame) = ef.currency
 frequency(ef::EconFrame) = ef.frequency
 subject(ef::EconFrame) = ef.subject
 get_dates(ef::EconRepeatedCrossSection) = ef.data[!, ef.date_var]
+get_dates(ef::EconPanel) = ef.data[!, ef.date_var]
 get_dates(ef::EconCrossSection) = ef.date
 get_weights(ef::EconFrame) = ef.data[!, ef.weight_var]
+get_ids(ef::EconPanel) = ef.data[!, ef.id_var]
 
 # Reconstruct EconFrame with updated fields
 """
@@ -138,6 +160,19 @@ function reconstruct(
     weight_var=ef.weight_var
 )
     return EconRepeatedCrossSection(data, source, subject, frequency, date_var; currency, weight_var)
+end
+function reconstruct(
+    ef::EconPanel; 
+    data=ef.data, 
+    source=ef.source, 
+    subject=ef.subject, 
+    frequency=ef.frequency, 
+    currency=ef.currency,
+    date_var=ef.date_var,
+    id_var=ef.id_var,
+    weight_var=ef.weight_var
+)
+    return EconPanel(data, source, subject, frequency, date_var, id_var; currency, weight_var)
 end
 
 # Base methods
@@ -264,6 +299,36 @@ function Base.show(io::IO, ef::EconRepeatedCrossSection{Ds,Dl,Df}) where {Ds,Dl,
     print(io, "EconRepeatedCrossSection{$(Ds.name.name), $(Dl.name.name), $(Df.name.name), $curr_str}(")
     print(io, "$(ef.source), $(ef.subject), $(ef.frequency), ")
     print(io, "dates: $date_range, ")
+    print(io, "currency: $curr_str, ")
+    print(io, "$(nrow(ef)) observations, ")
+    print(io, "$(ncol(ef.data))×$(nrow(ef.data)) DataFrame\n")
+    show(io, ef.data)
+end
+function Base.show(io::IO, ef::EconPanel{Ds,Dl,Df}) where {Ds,Dl,Df}
+    dates = get_dates(ef)
+    ids = get_ids(ef)
+    
+    # Get date range
+    date_range = if isempty(dates)
+        "no dates"
+    elseif length(dates) == 1
+        "$(dates[1])"
+    else
+        "$(minimum(dates)) to $(maximum(dates))"
+    end
+    
+    # Get panel info
+    n_individuals = length(unique(ids))
+    n_periods = length(unique(dates))
+    
+    # Get currency string
+    curr_str = currency_string(ef.currency)
+    
+    # Print type with panel info
+    print(io, "EconPanel{$(Ds.name.name), $(Dl.name.name), $(Df.name.name), $curr_str}(")
+    print(io, "$(ef.source), $(ef.subject), $(ef.frequency), ")
+    print(io, "dates: $date_range, ")
+    print(io, "$n_individuals individuals, $n_periods periods, ")
     print(io, "currency: $curr_str, ")
     print(io, "$(nrow(ef)) observations, ")
     print(io, "$(ncol(ef.data))×$(nrow(ef.data)) DataFrame\n")

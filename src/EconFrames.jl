@@ -31,10 +31,12 @@ module EconFrames
     # Types
     include(joinpath(BASE_FOLDER, "src", "dep", "types_aux.jl"))
     include(joinpath(BASE_FOLDER, "src", "dep", "types_main.jl"))
-        export EconFrame, EconCrossSection, EconRepeatedCrossSection, EconSet
+        export EconFrame, EconCrossSection, EconRepeatedCrossSection, EconPanel, EconSet
         # export TenureStatus, Owner, Renter, NoTenure
 
     # Methods
+    include(joinpath(BASE_FOLDER, "src", "dep", "panel.jl"))
+        export is_balanced, lag, lead
     include(joinpath(BASE_FOLDER, "src", "dep", "collapse.jl"))
         export collapse
         export only_head, weighted_mean, weighted_sum
