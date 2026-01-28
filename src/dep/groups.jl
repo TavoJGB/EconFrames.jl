@@ -341,7 +341,7 @@ DataFrames.groupby(ef::EconFrame, args...; kwargs...) = DataFrames.groupby(ef.da
 """
     combine(ef::EconFrame, groupcols, args...; kwargs...)
 
-Group by `groupcols` and combine, returning a new DataFrame.
+Group by `groupcols` and combine, returning a new EconFrame.
 
 This is a convenience wrapper that combines groupby + combine in one call.
 For more complex operations, use `groupby` explicitly.
@@ -361,17 +361,57 @@ function DataFrames.combine(
     ef::EconFrame, groupcols, args...;
     skip_basic::Bool=false, kwargs...
 )
-    gdf = groupby(ef.data, groupcols; skipmissing=true)
+    @unpack data, weight_var = ef;
+    gdf = groupby(data, groupcols; skipmissing=true)
     if skip_basic
         df_combined = combine(gdf, args...; kwargs...)
     else
         basic_fs = (
-            :weight => length => :N,
-            :weight => sum => :weight
+            weight_var => length => :N,
+            weight_var => sum => :weight
         )
         df_combined = combine(gdf, basic_fs..., args...; kwargs...)
     end
     return reconstruct(ef; data=df_combined)
+end
+
+"""
+    combine(ef::EconPanel, groupcols, args...; kwargs...)
+
+Group by `groupcols` and combine an EconPanel, returning an EconRepeatedCrossSection.
+
+Combining a panel destroys the individual ID structure, so the result is converted
+to an EconRepeatedCrossSection which preserves the time structure but not panel structure.
+
+# Examples
+```julia
+# Returns EconRepeatedCrossSection
+result = combine(psid, :year, :wealth => mean)
+result = combine(psid, [:year, :age_group], :wealth => mean)
+```
+"""
+function DataFrames.combine(
+    ef::EconPanel, groupcols, args...;
+    skip_basic::Bool=false, kwargs...
+)
+    @unpack data, weight_var, date_var = ef;
+    gdf = groupby(data, groupcols; skipmissing=true)
+    
+    if skip_basic
+        df_combined = combine(gdf, args...; kwargs...)
+    else
+        basic_fs = (
+            weight_var => length => :N,
+            weight_var => sum => :weight
+        )
+        df_combined = combine(gdf, basic_fs..., args...; kwargs...)
+    end
+    
+    # Return EconRepeatedCrossSection (panel structure is lost after combine)
+    return EconRepeatedCrossSection(
+        df_combined, ef.source, ef.subject, ef.frequency, date_var;
+        currency=ef.currency, weight_var
+    )
 end
 
 # transform!
