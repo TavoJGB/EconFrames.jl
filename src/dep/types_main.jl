@@ -177,7 +177,7 @@ end
 
 # Base methods
 Base.size(ef::EconFrame) = size(ef.data)
-Base.getindex(ef::EconFrame, args...) = getindex(ef.data, args...)
+Base.getindex(ef::EconFrame, args...) = reconstruct(ef; data=getindex(ef.data, args...))
 Base.setindex!(ef::EconFrame, val, args...) = setindex!(ef.data, val, args...)
 Base.view(ef::EconFrame, args...) = view(ef.data, args...)
 Base.propertynames(ef::EconFrame) = propertynames(ef.data)
