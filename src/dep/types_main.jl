@@ -226,6 +226,34 @@ function DataFrames.leftjoin(ef_L::EconFrame, ef_R::EconFrame, args...; kwargs..
     
     return result
 end
+function DataFrames.leftjoin!(ef_L::EconFrame, df_R::DataFrame, args...; kwargs...)
+    # Save metadata from both frames
+    saved_meta_L = df_save_metadata(ef_L)
+    saved_meta_R = df_save_metadata(df_R)
+    
+    # Perform join
+    DataFrames.leftjoin!(ef_L.data, df_R, args...; kwargs...)
+    
+    # Restore metadata from both frames (left takes precedence for overlapping columns)
+    df_restore_metadata!(ef_L, saved_meta_R)
+    df_restore_metadata!(ef_L, saved_meta_L)
+    
+    return ef_L
+end
+function DataFrames.leftjoin!(ef_L::EconFrame, ef_R::EconFrame, args...; kwargs...)
+    # Save metadata from both frames
+    saved_meta_L = df_save_metadata(ef_L)
+    saved_meta_R = df_save_metadata(ef_R)
+    
+    # Perform join
+    DataFrames.leftjoin!(ef_L.data, ef_R.data, args...; kwargs...)
+    
+    # Restore metadata from both frames (left takes precedence for overlapping columns)
+    df_restore_metadata!(ef_L, saved_meta_R)
+    df_restore_metadata!(ef_L, saved_meta_L)
+    
+    return ef_L
+end
 DataFrames.dropmissing(ef::EconFrame, args...; kwargs...) = reconstruct(ef; data=DataFrames.dropmissing(ef.data, args...; kwargs...))
 DataFrames.dropmissing!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.dropmissing!, args...)
 
