@@ -177,7 +177,10 @@ end
 
 # Base methods
 Base.size(ef::EconFrame) = size(ef.data)
-Base.getindex(ef::EconFrame, args...) = reconstruct(ef; data=getindex(ef.data, args...))
+function Base.getindex(ef::EconFrame, args...)
+    result = getindex(ef.data, args...)
+    return result isa DataFrame ? reconstruct(ef; data=result) : result
+end
 Base.setindex!(ef::EconFrame, val, args...) = setindex!(ef.data, val, args...)
 Base.view(ef::EconFrame, args...) = view(ef.data, args...)
 Base.propertynames(ef::EconFrame) = propertynames(ef.data)
@@ -225,6 +228,34 @@ function DataFrames.leftjoin(ef_L::EconFrame, ef_R::EconFrame, args...; kwargs..
     df_restore_metadata!(result, saved_meta_L)
     
     return result
+end
+function DataFrames.leftjoin!(ef_L::EconFrame, df_R::DataFrame, args...; kwargs...)
+    # Save metadata from both frames
+    saved_meta_L = df_save_metadata(ef_L)
+    saved_meta_R = df_save_metadata(df_R)
+    
+    # Perform join
+    DataFrames.leftjoin!(ef_L.data, df_R, args...; kwargs...)
+    
+    # Restore metadata from both frames (left takes precedence for overlapping columns)
+    df_restore_metadata!(ef_L, saved_meta_R)
+    df_restore_metadata!(ef_L, saved_meta_L)
+    
+    return ef_L
+end
+function DataFrames.leftjoin!(ef_L::EconFrame, ef_R::EconFrame, args...; kwargs...)
+    # Save metadata from both frames
+    saved_meta_L = df_save_metadata(ef_L)
+    saved_meta_R = df_save_metadata(ef_R)
+    
+    # Perform join
+    DataFrames.leftjoin!(ef_L.data, ef_R.data, args...; kwargs...)
+    
+    # Restore metadata from both frames (left takes precedence for overlapping columns)
+    df_restore_metadata!(ef_L, saved_meta_R)
+    df_restore_metadata!(ef_L, saved_meta_L)
+    
+    return ef_L
 end
 DataFrames.dropmissing(ef::EconFrame, args...; kwargs...) = reconstruct(ef; data=DataFrames.dropmissing(ef.data, args...; kwargs...))
 DataFrames.dropmissing!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.dropmissing!, args...)
