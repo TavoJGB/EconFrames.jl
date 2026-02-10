@@ -195,6 +195,8 @@ DataFrames.colmetadatakeys(ef::EconFrame, args...) = DataFrames.colmetadatakeys(
 DataFrames.insertcols!(ef::EconFrame, args...) = DataFrames.insertcols!(ef.data, args...)
 DataFrames.select(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.select(ef.data, args...; kwargs...))
 DataFrames.select!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.select!, args...)
+DataFrames.filter(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.filter(ef.data, args...; kwargs...))
+DataFrames.filter!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.filter!, args...)
 DataFrames.subset(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.subset(ef.data, args...; kwargs...))
 DataFrames.subset!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.subset!, args...)
 DataFrames.rename(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.rename(ef.data, args...; kwargs...))
