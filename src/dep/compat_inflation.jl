@@ -63,7 +63,7 @@ function price_conversion!(
         matching_cpi = match_variable_to_cpi(ef, var, cpi_dict, anygood_cpi)
         
         if !isnothing(matching_cpi)
-            ef[!, var] .= conversion_fn(ef[!, var], matching_cpi, args...)
+            ef.data[!, var] .= conversion_fn(ef.data[!, var], matching_cpi, args...)
         else
             push!(unconverted_vars, var)
             # Store pre-conversion currency in metadata (only for to_real)
