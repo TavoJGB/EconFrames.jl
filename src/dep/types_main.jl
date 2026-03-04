@@ -205,66 +205,22 @@ DataFrames.subset!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, D
 DataFrames.subset!(p::Pair, ef::EconFrame) = df_function_keeping_metadata!(ef, (df, pair) -> DataFrames.subset!(pair, df), p)
 DataFrames.rename(ef::EconFrame, args...; kwargs...) = reconstruct(ef;data=DataFrames.rename(ef.data, args...; kwargs...))
 DataFrames.rename!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.rename!, args...)
-function DataFrames.leftjoin(ef_L::EconFrame, df_R::DataFrame, args...; kwargs...)
-    # Save metadata from left frame
-    saved_meta_L = df_save_metadata(ef_L)
-    saved_meta_R = df_save_metadata(df_R)
-    
-    # Perform join
-    result = reconstruct(ef_L; data=DataFrames.leftjoin(ef_L.data, df_R, args...; kwargs...))
-    
-    # Restore metadata from both frames
-    df_restore_metadata!(result, saved_meta_R)
-    df_restore_metadata!(result, saved_meta_L)
-    
-    return result
-end
-function DataFrames.leftjoin(ef_L::EconFrame, ef_R::EconFrame, args...; kwargs...)
-    # Save metadata from both frames
-    saved_meta_L = df_save_metadata(ef_L)
-    saved_meta_R = df_save_metadata(ef_R)
-    
-    # Perform join
-    result = reconstruct(ef_L; data=DataFrames.leftjoin(ef_L.data, ef_R.data, args...; kwargs...))
-    
-    # Restore metadata from both frames (left takes precedence for overlapping columns)
-    df_restore_metadata!(result, saved_meta_R)
-    df_restore_metadata!(result, saved_meta_L)
-    
-    return result
-end
-function DataFrames.leftjoin!(ef_L::EconFrame, df_R::DataFrame, args...; kwargs...)
-    # Save metadata from both frames
-    saved_meta_L = df_save_metadata(ef_L)
-    saved_meta_R = df_save_metadata(df_R)
-    
-    # Perform join
-    DataFrames.leftjoin!(ef_L.data, df_R, args...; kwargs...)
-    
-    # Restore metadata from both frames (left takes precedence for overlapping columns)
-    df_restore_metadata!(ef_L, saved_meta_R)
-    df_restore_metadata!(ef_L, saved_meta_L)
-    
-    return ef_L
-end
-function DataFrames.leftjoin!(ef_L::EconFrame, ef_R::EconFrame, args...; kwargs...)
-    # Save metadata from both frames
-    saved_meta_L = df_save_metadata(ef_L)
-    saved_meta_R = df_save_metadata(ef_R)
-    
-    # Perform join
-    DataFrames.leftjoin!(ef_L.data, ef_R.data, args...; kwargs...)
-    
-    # Restore metadata from both frames (left takes precedence for overlapping columns)
-    df_restore_metadata!(ef_L, saved_meta_R)
-    df_restore_metadata!(ef_L, saved_meta_L)
-    
-    return ef_L
-end
+DataFrames.leftjoin(ef_L::EconFrame, df_R::DataFrame, args...; kwargs...) = df_join_keeping_metadata(ef_L, df_R, DataFrames.leftjoin, args...; kwargs...)
+DataFrames.leftjoin(ef_L::EconFrame, ef_R::EconFrame, args...; kwargs...) = df_join_keeping_metadata(ef_L, ef_R, DataFrames.leftjoin, args...; kwargs...)
+DataFrames.leftjoin(df_L::DataFrame, ef_R::EconFrame, args...; kwargs...) = leftjoin(df_L, ef_R.data, args...; kwargs...)
+DataFrames.leftjoin!(ef_L::EconFrame, df_R::DataFrame, args...; kwargs...) = df_join_keeping_metadata!(ef_L, df_R, DataFrames.leftjoin, args...; kwargs...)
+DataFrames.leftjoin!(ef_L::EconFrame, ef_R::EconFrame, args...; kwargs...) = df_join_keeping_metadata!(ef_L, ef_R, DataFrames.leftjoin, args...; kwargs...)
+DataFrames.leftjoin!(df_L::DataFrame, ef_R::EconFrame, args...; kwargs...) = leftjoin!(df_L, ef_R.data, args...; kwargs...)
+DataFrames.innerjoin(ef_L::EconFrame, df_R::DataFrame, args...; kwargs...) = df_join_keeping_metadata(ef_L, df_R, DataFrames.innerjoin, args...; kwargs...)
+DataFrames.innerjoin(ef_L::EconFrame, ef_R::EconFrame, args...; kwargs...) = df_join_keeping_metadata(ef_L, ef_R, DataFrames.innerjoin, args...; kwargs...)
+DataFrames.outerjoin(df_L::DataFrame, ef_R::EconFrame, args...; kwargs...) = outerjoin(df_L, ef_R.data, args...; kwargs...)
+DataFrames.outerjoin(ef_L::EconFrame, df_R::DataFrame, args...; kwargs...) = df_join_keeping_metadata(ef_L, df_R, DataFrames.outerjoin, args...; kwargs...)
+DataFrames.outerjoin(ef_L::EconFrame, ef_R::EconFrame, args...; kwargs...) = df_join_keeping_metadata(ef_L, ef_R, DataFrames.outerjoin, args...; kwargs...)
 DataFrames.dropmissing(ef::EconFrame, args...; kwargs...) = reconstruct(ef; data=DataFrames.dropmissing(ef.data, args...; kwargs...))
 DataFrames.dropmissing!(ef::EconFrame, args...) = df_function_keeping_metadata!(ef, DataFrames.dropmissing!, args...)
 
 # Auxiliary
+# - Single-frame helpers
 function df_function_keeping_metadata(df::DataFrame, df_func::Function, args...; kwargs...)
     # Save all column metadata
     saved_meta = df_save_metadata(df)
@@ -300,6 +256,25 @@ function df_function_keeping_metadata!(ef::EconFrame, df_func::Function, args...
     # Restore metadata for remaining columns
     df_restore_metadata!(ef, saved_meta)
     return nothing
+end
+# - Join helpers (save & restore metadata from both frames; left takes precedence)
+function df_join_keeping_metadata(ef_L::EconFrame, right, join_func::Function, args...; kwargs...)
+    saved_meta_L = df_save_metadata(ef_L)
+    saved_meta_R = df_save_metadata(right)
+    right_data = right isa EconFrame ? right.data : right
+    result = reconstruct(ef_L; data=join_func(ef_L.data, right_data, args...; kwargs...))
+    df_restore_metadata!(result, saved_meta_R)
+    df_restore_metadata!(result, saved_meta_L)
+    return result
+end
+function df_join_keeping_metadata!(ef_L::EconFrame, right, join_func::Function, args...; kwargs...)
+    saved_meta_L = df_save_metadata(ef_L)
+    saved_meta_R = df_save_metadata(right)
+    right_data = right isa EconFrame ? right.data : right
+    ef_L.data = join_func(ef_L.data, right_data, args...; kwargs...)
+    df_restore_metadata!(ef_L, saved_meta_R)
+    df_restore_metadata!(ef_L, saved_meta_L)
+    return ef_L
 end
 # - Saving metadata
 function df_save_metadata(df::DataFrame)
