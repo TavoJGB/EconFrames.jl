@@ -68,9 +68,12 @@ end
 
 # Methods
 # Mark columns as monetary variables (they will use the EconFrame's currency)
-function monetary_variable!(ef::EconFrame, col::Symbol, good_type::GoodType=AnyGood())::Nothing
+function monetary_variable!(
+    ef::EconFrame, col::Symbol, good_type::GoodType=AnyGood();
+    do_parse::Bool=true
+)::Nothing
     # Ensure column contains Real numbers
-    if !(eltype(ef.data[!, col]) <: Real)
+    if !(eltype(ef.data[!, col]) <: Real) & do_parse
         ef.data[!, col] = parse.(Float64, string.(ef.data[!, col]))
     end
     # Set metadata
