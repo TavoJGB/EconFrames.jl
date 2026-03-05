@@ -58,6 +58,9 @@ function price_conversion!(
     all_mon_vars = list_monetary_variables(ef)
     unconverted_vars = String[]
     
+    # Save column metadata (can be lost during broadcast assignment)
+    saved_meta = df_save_metadata(ef)
+    
     # Convert each monetary variable
     for var in all_mon_vars
         matching_cpi = match_variable_to_cpi(ef, var, cpi_dict, anygood_cpi)
@@ -80,6 +83,9 @@ function price_conversion!(
         !isempty(unconverted_vars) && @warn("The following variables were not converted in $operation_name (no matching CPI found): $(unconverted_vars)")
         ef.currency = new_currency
     end
+    
+    # Restore column metadata (may have been lost during broadcast assignment)
+    df_restore_metadata!(ef, saved_meta)
     
     return nothing
 end

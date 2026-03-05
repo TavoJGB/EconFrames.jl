@@ -185,8 +185,28 @@ Base.setindex!(ef::EconFrame, val, args...) = setindex!(ef.data, val, args...)
 Base.view(ef::EconFrame, args...) = view(ef.data, args...)
 Base.dotview(ef::EconFrame, args...) = Base.dotview(ef.data, args...)
 Base.propertynames(ef::EconFrame) = propertynames(ef.data)
-Base.getproperty(ef::EconFrame, s::Symbol) = s in fieldnames(typeof(ef)) ? getfield(ef, s) : getproperty(ef.data, s)
+function Base.getproperty(ef::EconFrame, s::Symbol)
+    s in fieldnames(typeof(ef)) && return getfield(ef, s)
+    col = getproperty(ef.data, s)
+    return _maybe_wrap_monetary(ef, col, s)
+end
 Base.setproperty!(ef::EconFrame, s::Symbol, val) = s in fieldnames(typeof(ef)) ? setfield!(ef, s, val) : setproperty!(ef.data, s, val)
+
+# Metadata helpers
+_is_monetary(df::DataFrame, col::Symbol) = "is_monetary" in colmetadatakeys(df, col) && colmetadata(df, col, "is_monetary")
+_col_good_type(df::DataFrame, col::Symbol) = "good_type" in colmetadatakeys(df, col) ? colmetadata(df, col, "good_type") : AnyGood()
+
+# Wrap monetary columns in MonetaryVariable when accessed via getproperty
+function _maybe_wrap_monetary(ef::EconFrame, col::AbstractVector, s::Symbol)
+    (_is_monetary(ef.data, s) && nonmissingtype(eltype(col)) <: Real) || return col
+    data = col isa Vector ? col : collect(col)
+    return MonetaryVariable(data, _get_frequency(ef), getfield(ef, :subject), getfield(ef, :currency), _col_good_type(ef.data, s))
+end
+
+# Frequency accessor for _wrap_monetary (EconCrossSection has no frequency field)
+_get_frequency(ef::EconRepeatedCrossSection) = getfield(ef, :frequency)
+_get_frequency(ef::EconPanel) = getfield(ef, :frequency)
+_get_frequency(::EconCrossSection) = NAFrequency()
 Base.sort!(ef::EconFrame, args...; kwargs...) = df_function_keeping_metadata!(ef, Base.sort!, args...; kwargs...)
 
 # DataFrame methods
