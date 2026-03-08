@@ -81,15 +81,15 @@ function monetary_variable!(
     colmetadata!(ef.data, col, "good_type", good_type)
     return nothing
 end
-function monetary_variable!(ef::EconFrame, cols::AbstractVector{Symbol}, good_type::GoodType=AnyGood())::Nothing
+function monetary_variable!(ef::EconFrame, cols::AbstractVector{Symbol}, good_type::GoodType=AnyGood(); kwargs...)::Nothing
     for col in cols
-        monetary_variable!(ef, col, good_type)
+        monetary_variable!(ef, col, good_type; kwargs...)
     end
     return nothing
 end
-function monetary_variable!(ef::EconFrame, cols::AbstractVector{<:Symbol}, good_types::Vector{<:GoodType})::Nothing
+function monetary_variable!(ef::EconFrame, cols::AbstractVector{<:Symbol}, good_types::Vector{<:GoodType}; kwargs...)::Nothing
     for (col, good_type) in zip(cols, good_types)
-        monetary_variable!(ef, Symbol(col), good_type)
+        monetary_variable!(ef, Symbol(col), good_type; kwargs...)
     end
     return nothing
 end
