@@ -1,5 +1,3 @@
-struct TmpSource <: DataSource end
-
 function test_monetary_metadata_persistence()
     @testset "Monetary Metadata Persistence" begin
 
