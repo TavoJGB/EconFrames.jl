@@ -33,6 +33,7 @@ module EconFrames
     include(joinpath(BASE_FOLDER, "src", "dep", "types_main.jl"))
         export EconFrame, EconCrossSection, EconRepeatedCrossSection, EconPanel, EconSet
         export currency, frequency, subject, get_weights, get_dates, get_ids
+        export monetary_variable!, list_monetary_variables
         # export TenureStatus, Owner, Renter, NoTenure
 
     # Methods

@@ -8,7 +8,7 @@ function test_econframe_single_cpi()
             wealth = [120000.0, 135000.0, 150000.0, 165000.0, 180000.0]
         )
         
-        ef = EconRepeatedCrossSection(df, PSID(), Household(), Annual(), :year; currency=NominalUSD())
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalUSD())
         
         # Mark as monetary variables
         monetary_variable!(ef, [:income, :wealth])
@@ -46,7 +46,7 @@ function test_econframe_multiple_cpis()
             other_exp = [8000.0, 8200.0, 8500.0, 8800.0, 9000.0]
         )
         
-        ef = EconRepeatedCrossSection(df, PSID(), Household(), Annual(), :year; currency=NominalUSD())
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalUSD())
         
         # Mark as monetary variables with specific good types
         monetary_variable!(ef, [:food_exp, :housing_exp, :other_exp])
@@ -100,7 +100,7 @@ function test_econframe_partial_matching()
             unmatched = [5000.0, 5200.0, 5400.0]
         )
         
-        ef = EconRepeatedCrossSection(df, PSID(), Household(), Annual(), :year; currency=NominalUSD())
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalUSD())
 
         # Mark variables with good types
         monetary_variable!(ef, [:consumption, :housing, :unmatched])
@@ -133,7 +133,7 @@ function test_econframe_already_converted()
             income = [45000.0, 48000.0, 50000.0]
         )
         
-        ef = EconRepeatedCrossSection(df, PSID(), Household(), Annual(), :year; currency=NominalUSD())
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalUSD())
         monetary_variable!(ef, :income)
         
         cpi = CPI([1990, 1991, 1992], [100.0, 103.0, 106.5], AnyGood())

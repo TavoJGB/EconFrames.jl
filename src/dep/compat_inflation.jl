@@ -71,7 +71,7 @@ function price_conversion!(
             push!(unconverted_vars, var)
             # Store pre-conversion currency in metadata (only for to_real)
             if operation_name == "to_real"
-                colmetadata!(ef.data, var, "currency", currency(ef))
+                colmetadata!(ef.data, var, "currency", currency(ef); style=:note)
             end
         end
     end

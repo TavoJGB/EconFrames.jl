@@ -4,9 +4,13 @@ using DataFrames
 
 using EconFrames
 
+# Auxiliary test source type (avoids dependency on external source names)
+struct TestSource <: DataSource end
+
 # Include test modules
 include(joinpath("dep", "test_inflation.jl"))
 include(joinpath("dep", "test_filter.jl"))
+include(joinpath("dep", "test_monetary_metadata.jl"))
 
 # Auxiliary good type
 struct OtherGood <: EconVariables.SomeGood end
@@ -20,4 +24,8 @@ end
 
 @testset "Filter Tests" begin
     test_filter_methods()
+end
+
+@testset "Monetary Metadata Tests" begin
+    test_monetary_metadata_persistence()
 end
