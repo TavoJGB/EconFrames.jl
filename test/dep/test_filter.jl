@@ -7,7 +7,7 @@ function test_filter_methods()
             income = [100.0, 200.0, 300.0, 400.0]
         )
 
-        ef = EconRepeatedCrossSection(df, PSID(), Household(), Annual(), :year; currency=NominalUSD())
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalUSD())
         monetary_variable!(ef, :income)
 
         # Non-mutating filter with function first
@@ -18,7 +18,7 @@ function test_filter_methods()
         @test colmetadata(ef_filtered.data, :income, "is_monetary") == true
 
         # Mutating filter! with function first
-        ef_mut = reconstruct(ef)
+        ef_mut = deepcopy(ef)
         filter!(row -> !ismissing(row.hid_prev), ef_mut)
         @test nrow(ef_mut) == 2
         @test all(.!ismissing.(ef_mut.hid_prev))

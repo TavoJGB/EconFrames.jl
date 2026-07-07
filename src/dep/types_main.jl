@@ -77,19 +77,33 @@ function monetary_variable!(
         ef.data[!, col] = parse.(Float64, string.(ef.data[!, col]))
     end
     # Set metadata
-    colmetadata!(ef.data, col, "is_monetary", true)
-    colmetadata!(ef.data, col, "good_type", good_type)
+    colmetadata!(ef.data, col, "is_monetary", true; style=:note)
+    colmetadata!(ef.data, col, "good_type", good_type; style=:note)
     return nothing
 end
-function monetary_variable!(ef::EconFrame, cols::AbstractVector{Symbol}, good_type::GoodType=AnyGood(); kwargs...)::Nothing
+function monetary_variable!(ef::EconFrame, cols::AbstractVector{Symbol}, good_type::GoodType=AnyGood())::Nothing
+    # Parse first so later column replacement does not wipe metadata set on earlier columns.
     for col in cols
-        monetary_variable!(ef, col, good_type; kwargs...)
+        if !(eltype(ef.data[!, col]) <: Real)
+            ef.data[!, col] = parse.(Float64, string.(ef.data[!, col]))
+        end
+    end
+
+    for col in cols
+        monetary_variable!(ef, col, good_type; do_parse=false)
     end
     return nothing
 end
-function monetary_variable!(ef::EconFrame, cols::AbstractVector{<:Symbol}, good_types::Vector{<:GoodType}; kwargs...)::Nothing
+function monetary_variable!(ef::EconFrame, cols::AbstractVector{<:Symbol}, good_types::Vector{<:GoodType})::Nothing
+    # Parse first so later column replacement does not wipe metadata set on earlier columns.
+    for col in cols
+        if !(eltype(ef.data[!, col]) <: Real)
+            ef.data[!, col] = parse.(Float64, string.(ef.data[!, col]))
+        end
+    end
+
     for (col, good_type) in zip(cols, good_types)
-        monetary_variable!(ef, Symbol(col), good_type; kwargs...)
+        monetary_variable!(ef, Symbol(col), good_type; do_parse=false)
     end
     return nothing
 end
@@ -190,7 +204,19 @@ function Base.getproperty(ef::EconFrame, s::Symbol)
     col = getproperty(ef.data, s)
     return _maybe_wrap_monetary(ef, col, s)
 end
-Base.setproperty!(ef::EconFrame, s::Symbol, val) = s in fieldnames(typeof(ef)) ? setfield!(ef, s, val) : setproperty!(ef.data, s, val)
+function Base.setproperty!(ef::EconFrame, s::Symbol, val)
+    if s in fieldnames(typeof(ef))
+        return setfield!(ef, s, val)
+    elseif val isa MonetaryVariable
+        # Preserve monetary semantics when assigning wrapped monetary vectors as columns.
+        ef.data[!, s] = Vector(val)
+        colmetadata!(ef.data, s, "is_monetary", true; style=:note)
+        colmetadata!(ef.data, s, "good_type", val.good; style=:note)
+        return val
+    else
+        return setproperty!(ef.data, s, val)
+    end
+end
 
 # Metadata helpers
 _is_monetary(df::DataFrame, col::Symbol) = "is_monetary" in colmetadatakeys(df, col) && colmetadata(df, col, "is_monetary")
@@ -303,15 +329,15 @@ function df_join_keeping_metadata!(ef_L::EconFrame, right, join_func::Function, 
 end
 # - Saving metadata
 function df_save_metadata(df::DataFrame)
-    return [(col, key, DataFrames.colmetadata(df, col, key)) 
+    return [(col, key, DataFrames.colmetadata(df, col, key), DataFrames.colmetadata(df, col, key; style=true)[2]) 
                   for col in names(df) 
                   for key in DataFrames.colmetadatakeys(df, col)]
 end
 df_save_metadata(ef::EconFrame) = df_save_metadata(ef.data)
 # - Restoring metadata
 function df_restore_metadata!(df::DataFrame, saved_meta)::Nothing
-    for (col, key, value) in saved_meta
-        col in names(df) && DataFrames.colmetadata!(df, col, key, value)
+    for (col, key, value, style) in saved_meta
+        col in names(df) && DataFrames.colmetadata!(df, col, key, value; style)
     end
     return nothing
 end
