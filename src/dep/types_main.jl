@@ -191,6 +191,17 @@ function reconstruct(
 )
     return EconPanel(data, source, subject, frequency, date_var, id_var; currency, weight_var)
 end
+function reconstruct(
+    ef::EconCrossSection;
+    data=ef.data,
+    source=ef.source,
+    subject=ef.subject,
+    currency=ef.currency,
+    date=ef.date,
+    weight_var=ef.weight_var
+)
+    return EconCrossSection(data, source, subject, date; currency, weight_var)
+end
 
 # Base methods
 Base.size(ef::EconFrame) = size(ef.data)
