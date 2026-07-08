@@ -7,7 +7,7 @@ function test_monetary_metadata_persistence()
             lab_income_inkind = ["10.0", "20.0"],
         )
 
-        ef = EconRepeatedCrossSection(df, TmpSource(), Individual(), Annual(), :year; currency=NominalEUR())
+        ef = EconRepeatedCrossSection(df, TestSource(), Individual(), Annual(), :year; currency=NominalEUR())
         monetary_variable!(ef, [:lab_income_direct, :lab_income_inkind], AnyGood())
 
         ef.lab_income = @. ef.lab_income_direct + ef.lab_income_inkind
@@ -39,8 +39,8 @@ function test_collapse_preserves_monetary_metadata()
             weight = [1.0, 1.0],
         )
 
-        ef_ii = EconRepeatedCrossSection(ii_df, TmpSource(), Individual(), Annual(), :year; currency=NominalEUR())
-        ef_hh = EconRepeatedCrossSection(hh_df, TmpSource(), Household(), Annual(), :year; currency=NominalEUR())
+        ef_ii = EconRepeatedCrossSection(ii_df, TestSource(), Individual(), Annual(), :year; currency=NominalEUR())
+        ef_hh = EconRepeatedCrossSection(hh_df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
 
         monetary_variable!(ef_ii, :lab_income, AnyGood())
         monetary_variable!(ef_hh, :wealth, AnyGood())
@@ -49,5 +49,37 @@ function test_collapse_preserves_monetary_metadata()
         out = collapse(es, :hh, :ii, :lab_income => sum => :lab_income, :age => only_head)
 
         @test sort(String.(list_monetary_variables(out))) == ["lab_income", "wealth"]
+    end
+end
+
+function test_collapse_dropmissing_new_variables()
+    @testset "Collapse dropmissing on new variables" begin
+        ii_df = DataFrame(
+            year = Date.([2002, 2002]),
+            hid = [1, 1],
+            imputation = [1, 1],
+            income = [100.0, 50.0],
+            weight = [1.0, 1.0],
+        )
+        hh_df = DataFrame(
+            year = Date.([2002, 2002]),
+            hid = [1, 2],
+            imputation = [1, 1],
+            wealth = [1000.0, 2000.0],
+            weight = [1.0, 1.0],
+        )
+
+        ef_ii = EconRepeatedCrossSection(ii_df, TestSource(), Individual(), Annual(), :year; currency=NominalEUR())
+        ef_hh = EconRepeatedCrossSection(hh_df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
+
+        es = EconSet(Dict(:ii => ef_ii, :hh => ef_hh), (:ii, :hh) => [:year, :hid, :imputation])
+
+        out_keep = collapse(es, :hh, :ii, :income => sum => :hh_income)
+        @test eltype(out_keep.hh_income) == Union{Missing, Float64}
+
+        out_drop = collapse(es, :hh, :ii, :income => sum => :hh_income; dropmissing=true)
+        @test nrow(out_drop) == 1
+        @test out_drop.hid == [1]
+        @test eltype(out_drop.hh_income) == Float64
     end
 end

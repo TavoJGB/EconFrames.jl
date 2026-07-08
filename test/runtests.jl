@@ -30,6 +30,7 @@ end
 @testset "Monetary Metadata Tests" begin
     test_monetary_metadata_persistence()
     test_collapse_preserves_monetary_metadata()
+    test_collapse_dropmissing_new_variables()
 end
 
 @testset "Quantile Tests" begin

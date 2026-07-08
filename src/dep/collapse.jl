@@ -5,7 +5,7 @@
 
 """
     collapse(es::EconSet, target::Symbol, source::Symbol, ops...; 
-             by::Union{Symbol,Vector{Symbol}}=nothing)
+             by::Union{Symbol,Vector{Symbol}}=nothing, dropmissing::Bool=false)
 
 Collapse data from a finer level (source) to a coarser level (target) by aggregating variables.
 
@@ -18,6 +18,7 @@ injection for weighted functions.
 - `source`: Key for the source (finer) EconFrame in the EconSet  
 - `ops`: Aggregation operations in DataFrames.jl syntax (see examples)
 - `by`: Linking variable (default: uses `es.cross_id[target, source]`)
+- `dropmissing`: If `true`, drop rows with any missing values in newly collapsed variables
 
 # Simplified syntax for common aggregations
 You can specify common aggregations using simple `Symbol => Function` pairs:
@@ -66,7 +67,8 @@ collapse(es, :hh, :ii,
 """
 function collapse(
     es::EconSet, target::Symbol, source::Symbol, ops...;
-    by::Union{Symbol,Vector{Symbol}}=es.cross_id[target, source]
+    by::Union{Symbol,Vector{Symbol}}=es.cross_id[target, source],
+    dropmissing::Bool=false
 )::EconFrame    
     # Get source and target frames
     ef_source = es.efs[source]
@@ -109,8 +111,20 @@ function collapse(
     df_collapsed = combine(gdf, processed_ops...)
     df_restore_metadata!(df_collapsed, metad)
     
-    # Merge collapsed data into target frame    
-    return leftjoin(ef_target, df_collapsed; on=by, makeunique=true)
+    # Merge collapsed data into target frame
+    df_out = leftjoin(ef_target, df_collapsed; on=by, makeunique=true)
+
+    # Optionally drop target rows without source matches in new variables.
+    if dropmissing
+        existing_cols = Set(names(ef_target))
+        new_cols = [name for name in names(df_out) if !(name in existing_cols)]
+
+        if !isempty(new_cols)
+            df_out = DataFrames.dropmissing(df_out, new_cols)
+        end
+    end
+
+    return df_out
 end
 
 
