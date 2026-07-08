@@ -83,3 +83,35 @@ function test_collapse_dropmissing_new_variables()
         @test eltype(out_drop.hh_income) == Float64
     end
 end
+
+function test_getindex_single_column_returns_vector()
+    @testset "Single column getindex returns vector" begin
+        rcs_df = DataFrame(
+            year = Date.([2002, 2003]),
+            income = [100, 200],
+            weight = [1.0, 1.0],
+        )
+        panel_df = DataFrame(
+            year = Date.([2002, 2003]),
+            id = [1, 1],
+            income = [300, 400],
+            weight = [1.0, 1.0],
+        )
+        cs_df = DataFrame(
+            income = [500, 600],
+            weight = [1.0, 1.0],
+        )
+
+        ef_rcs = EconRepeatedCrossSection(rcs_df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
+        ef_panel = EconPanel(panel_df, TestSource(), Household(), Annual(), :year, :id; currency=NominalEUR())
+        ef_cs = EconCrossSection(cs_df, TestSource(), Household(), Date(2008, 1, 1); currency=NominalEUR())
+
+        @test ef_rcs[!, :income] == ef_rcs.data[!, :income]
+        @test ef_panel[!, :income] == ef_panel.data[!, :income]
+        @test ef_cs[!, :income] == ef_cs.data[!, :income]
+
+        @test ef_rcs[!, [:year, :income]] isa EconRepeatedCrossSection
+        @test ef_panel[!, [:year, :id, :income]] isa EconPanel
+        @test ef_cs[!, [:income]] isa EconCrossSection
+    end
+end

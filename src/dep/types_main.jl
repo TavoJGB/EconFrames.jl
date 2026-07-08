@@ -205,7 +205,11 @@ end
 
 # Base methods
 Base.size(ef::EconFrame) = size(ef.data)
-Base.getindex(ef::EconFrame, args...) = reconstruct(ef; data=getindex(ef.data, args...))
+function Base.getindex(ef::EconFrame, args...)
+    out = getindex(ef.data, args...)
+    out isa DataFrame && return reconstruct(ef; data=out)
+    return out
+end
 Base.setindex!(ef::EconFrame, val, args...) = setindex!(ef.data, val, args...)
 Base.view(ef::EconFrame, args...) = view(ef.data, args...)
 Base.dotview(ef::EconFrame, args...) = Base.dotview(ef.data, args...)
