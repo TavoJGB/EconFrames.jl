@@ -156,6 +156,7 @@ end
                         weight_col::Union{Symbol,Nothing}=nothing,
                         rank_col::Symbol=Symbol(string(col)*"_rank"),
                         group_col::Symbol=Symbol(string(col)*"_group"),
+                        range_labels::Bool=default_range_labels(thresholds),
                         bottom_label::String="B", middle_label::String="M", top_label::String="T")
 
 Add quantile rank and group columns to an EconFrame based on a variable's distribution.
@@ -168,12 +169,14 @@ Add quantile rank and group columns to an EconFrame based on a variable's distri
 - `weight_col`: Column name for weights (default: uses :weight if available, uniform weights otherwise)
 - `rank_col`: Name for the rank column (default: `<col>_rank`)
 - `group_col`: Name for the group column (default: `<col>_group`)
-- `bottom_label`, `middle_label`, `top_label`: Prefixes for group labels (defaults: "B", "M", "T")
+- `range_labels`: Use interval labels (`"0-20"`, `"20-40"`, ...) instead of prefix labels.
+    Defaults to `default_range_labels(thresholds)`.
+- `bottom_label`, `middle_label`, `top_label`: Prefixes for group labels when `range_labels=false` (defaults: "B", "M", "T")
 
 # Details
 Creates two new columns:
 - Continuous rank in [0, 1] representing weighted percentile
-- Categorical group label ("B50", "M40", "T10", etc.)
+- Categorical group label ("0-50", "50-90", "90-100", etc.)
 
 Ranks are computed within each group defined by `by` columns.
 
@@ -184,6 +187,9 @@ psid = read_data(PSID())
 # Wealth groups: bottom 50%, middle 40%, top 10%
 assign_quantiles!(psid, :wealth, [0.5, 0.9])
 
+# Quintiles as ranges
+assign_quantiles!(psid, :wealth, [0.2, 0.4, 0.6, 0.8])
+
 # Within year and age group
 assign_groups!(psid, :age, 25:10:65)
 assign_quantiles!(psid, :wealth, [0.5, 0.9]; by=[:year, :age_group])
@@ -192,7 +198,8 @@ assign_quantiles!(psid, :income, [0.9]; weight_col=:person_weight)
 
 # Custom labels
 assign_quantiles!(psid, :wealth, [0.5, 0.9]; 
-                    bottom_label="Bottom", middle_label="Middle", top_label="Top")
+            range_labels=false,
+            bottom_label="Bottom", middle_label="Middle", top_label="Top")
 ```
 """
 function assign_quantiles!( ef::EconFrame, col::Symbol, thresholds::AbstractVector{<:Real};
@@ -200,6 +207,7 @@ function assign_quantiles!( ef::EconFrame, col::Symbol, thresholds::AbstractVect
                             col_name::String=string(col),
                             rank_col=col_name*"_rank",
                             group_col=col_name*"_quant",
+                            range_labels::Bool=default_range_labels(thresholds),
                             bottom_label::String="B", 
                             middle_label::String="M", 
                             top_label::String="T")
@@ -207,7 +215,13 @@ function assign_quantiles!( ef::EconFrame, col::Symbol, thresholds::AbstractVect
     col in propertynames(ef.data) || throw(ArgumentError("Column $col not found in EconFrame"))
     
     # Create quantile labels
-    quantile_labels = create_quantile_labels(thresholds; bottom_label, middle_label, top_label)
+    quantile_labels = create_quantile_labels(
+        thresholds;
+        range_labels,
+        bottom_label,
+        middle_label,
+        top_label
+    )
     
     # Compute ranks
     if isnothing(by)
@@ -251,7 +265,21 @@ end
 ==========================================================================#
 
 """
+    default_range_labels(thresholds::AbstractVector{<:Real}) -> Bool
+
+Choose default quantile label style based on number of quantile groups.
+
+Returns `true` (range labels) when there are more than 3 groups,
+and `false` (prefix labels) otherwise.
+"""
+function default_range_labels(thresholds::AbstractVector{<:Real})
+    n_quants = length(thresholds) + 1
+    return n_quants > 3
+end
+
+"""
     create_quantile_labels(thresholds::AbstractVector{<:Real}; 
+                          range_labels::Bool=default_range_labels(thresholds),
                           bottom_label::String="B", middle_label::String="M", 
                           top_label::String="T") -> Vector{String}
 
@@ -259,12 +287,14 @@ Create quantile group labels from threshold values.
 
 # Arguments
 - `thresholds`: Vector of quantile thresholds (e.g., [0.5, 0.9] for bottom 50%, middle 40%, top 10%)
-- `bottom_label`: Prefix for bottom group (default: "B")
-- `middle_label`: Prefix for middle groups (default: "M")
-- `top_label`: Prefix for top group (default: "T")
+- `range_labels`: Use interval labels (`"0-50"`, `"50-90"`, `"90-100"`).
+    Defaults to `default_range_labels(thresholds)`.
+- `bottom_label`: Prefix for bottom group when `range_labels=false` (default: "B")
+- `middle_label`: Prefix for middle groups when `range_labels=false` (default: "M")
+- `top_label`: Prefix for top group when `range_labels=false` (default: "T")
 
 # Returns
-Vector of group labels, e.g., ["B50", "M40", "T10"]
+Vector of group labels, e.g., ["0-50", "50-90", "90-100"]
 
 # Examples
 ```julia
@@ -274,11 +304,16 @@ create_quantile_labels([0.5, 0.9])
 create_quantile_labels([0.9])
 # Returns: ["B90", "T10"]
 
-create_quantile_labels([0.5, 0.9]; bottom_label="Bottom", middle_label="Middle", top_label="Top")
+create_quantile_labels([0.2, 0.4, 0.6, 0.8])
+# Returns: ["0-20", "20-40", "40-60", "60-80", "80-100"]
+
+create_quantile_labels([0.5, 0.9]; range_labels=false,
+                      bottom_label="Bottom", middle_label="Middle", top_label="Top")
 # Returns: ["Bottom50", "Middle40", "Top10"]
 ```
 """
 function create_quantile_labels(thresholds::AbstractVector{<:Real}; 
+                               range_labels::Bool=default_range_labels(thresholds),
                                bottom_label::String="B", 
                                middle_label::String="M", 
                                top_label::String="T")
@@ -289,6 +324,11 @@ function create_quantile_labels(thresholds::AbstractVector{<:Real};
     pcts = [Int(round(t * 100)) for t in thresholds]
     
     labels = String[]
+
+    if range_labels
+        edges = vcat(0, pcts, 100)
+        return ["$(edges[i])-$(edges[i+1])" for i in 1:(length(edges)-1)]
+    end
     
     if n == 1
         # Two groups: bottom and top

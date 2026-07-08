@@ -11,6 +11,7 @@ struct TestSource <: DataSource end
 include(joinpath("dep", "test_inflation.jl"))
 include(joinpath("dep", "test_filter.jl"))
 include(joinpath("dep", "test_monetary_metadata.jl"))
+include(joinpath("dep", "test_quantiles.jl"))
 
 # Auxiliary good type
 struct OtherGood <: EconVariables.SomeGood end
@@ -29,4 +30,9 @@ end
 @testset "Monetary Metadata Tests" begin
     test_monetary_metadata_persistence()
     test_collapse_preserves_monetary_metadata()
+end
+
+@testset "Quantile Tests" begin
+    test_create_quantile_labels()
+    test_assign_quantiles_range_labels()
 end
