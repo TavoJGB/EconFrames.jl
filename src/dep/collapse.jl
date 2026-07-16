@@ -127,6 +127,11 @@ function collapse(
     return df_out
 end
 
+function collapse!(es::EconSet, target::Symbol, args...; kwargs...)
+    es.efs[target] = collapse(es, target, args...; kwargs...)
+    return nothing
+end
+
 
 
 #==========================================================================

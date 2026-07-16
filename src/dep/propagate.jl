@@ -75,3 +75,8 @@ function propagate(
     # Join to target frame
     return leftjoin(ef_target, df_to_propagate; on=by, makeunique=true)
 end
+
+function propagate!(es::EconSet, target::Symbol, args...; kwargs...)
+    es.efs[target] = propagate(es, target, args...; kwargs...)
+    return nothing
+end

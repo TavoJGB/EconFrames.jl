@@ -40,10 +40,10 @@ module EconFrames
     include(joinpath(BASE_FOLDER, "src", "dep", "panel.jl"))
         export is_balanced, lag, lead
     include(joinpath(BASE_FOLDER, "src", "dep", "collapse.jl"))
-        export collapse
+        export collapse, collapse!
         export only_head, weighted_mean, weighted_sum
     include(joinpath(BASE_FOLDER, "src", "dep", "propagate.jl"))
-        export propagate
+        export propagate, propagate!
     include(joinpath(BASE_FOLDER, "src", "dep", "compat_inflation.jl"))
         export to_real!, to_nominal!, rebase!
     include(joinpath(BASE_FOLDER, "src", "dep", "groups.jl"))
