@@ -21,7 +21,7 @@ mutable struct EconRepeatedCrossSection{Ds<:DataSource, Dl<:DataSubject, Df<:Dat
         data::DataFrame, source::Ds, subject::Dl, frequency::Df, date_var::Union{Symbol,String};
         currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
     ) where {Ds<:DataSource, Dl<:DataSubject, Df<:DataFrequency}
-        data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
+        # data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
         return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, weight_var)
     end
 end
@@ -42,7 +42,7 @@ mutable struct EconPanel{Ds<:DataSource, Dl<:DataSubject, Df<:DataFrequency} <: 
         data::DataFrame, source::Ds, subject::Dl, frequency::Df, date_var::Union{Symbol,String}, id_var::Union{Symbol,String};
         currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
     ) where {Ds<:DataSource, Dl<:DataSubject, Df<:DataFrequency}
-        data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
+        # data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
         return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, id_var, weight_var)
     end
 end
@@ -53,17 +53,16 @@ mutable struct EconCrossSection{Ds<:DataSource, Dl<:DataSubject} <: EconFrame
     source::Ds
     subject::Dl
     currency::Currency      # Currency for monetary variables (not parametric to allow mutation)
-    date::Date
+    date::Any
     # Key columns
     weight_var::Union{Symbol,String}
     # Constructor
     function EconCrossSection(
-        data::DataFrame, source::Ds, subject::Dl, date::Date;
+        data::DataFrame, source::Ds, subject::Dl, date::Any;
         currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
     ) where {Ds<:DataSource, Dl<:DataSubject}
         return new{Ds, Dl}(data, source, subject, currency, date, weight_var)
     end
-    EconCrossSection(data::DataFrame, source::DataSource, subject::DataSubject, date; kwargs...) = EconCrossSection(data, source, subject, Date(date); kwargs...)
 end
 
 # Methods
