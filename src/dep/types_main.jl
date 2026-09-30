@@ -203,7 +203,7 @@ function reconstruct(
 end
 
 # Base methods
-Base.size(ef::EconFrame) = size(ef.data)
+Base.size(ef::EconFrame, args...) = size(ef.data, args...)
 function Base.getindex(ef::EconFrame, args...)
     out = getindex(ef.data, args...)
     out isa DataFrame && return reconstruct(ef; data=out)
