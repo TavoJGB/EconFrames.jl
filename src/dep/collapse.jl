@@ -79,8 +79,8 @@ function collapse(
     
     # Functions that need automatic weight injection
     weighted_funcs = Dict(
-        weighted_mean => (var) -> [var, weight_var] => ((x, w) -> weighted_mean(x, w)) => var,
-        weighted_sum => (var) -> [var, weight_var] => ((x, w) -> weighted_sum(x, w)) => var,
+        weighted_mean => (var, outvar=var) -> [var, weight_var] => ((x, w) -> weighted_mean(x, w)) => outvar,
+        weighted_sum => (var, outvar=var) -> [var, weight_var] => ((x, w) -> weighted_sum(x, w)) => outvar,
     )
     
     # Process operations
@@ -97,6 +97,26 @@ function collapse(
                 push!(processed_ops, weighted_funcs[func](var))
             else
                 # Pass through as-is
+                push!(processed_ops, op)
+            end
+        elseif op isa Pair{Symbol, <:Pair}
+            var, rhs = op.first, op.second
+
+            if rhs.first isa Function && rhs.second isa Symbol
+                func, outvar = rhs.first, rhs.second
+
+                if func == only_head
+                    # Special: only_head with explicit output name
+                    push!(processed_ops, [var, :head] => ((x, h) -> only(x[h])) => outvar)
+                elseif haskey(weighted_funcs, func)
+                    # Automatic weight injection with explicit output name
+                    push!(processed_ops, weighted_funcs[func](var, outvar))
+                else
+                    # Pass through as-is
+                    push!(processed_ops, op)
+                end
+            else
+                # Pass through complex operations as-is
                 push!(processed_ops, op)
             end
         else

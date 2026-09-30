@@ -84,6 +84,35 @@ function test_collapse_dropmissing_new_variables()
     end
 end
 
+function test_collapse_only_head_with_output_name()
+    @testset "Collapse only_head with output name" begin
+        ii_df = DataFrame(
+            year = Date.([2002, 2002, 2002]),
+            hid = [1, 1, 2],
+            imputation = [1, 1, 1],
+            head = [true, false, true],
+            age = [40, 38, 50],
+            weight = [1.0, 1.0, 1.0],
+        )
+        hh_df = DataFrame(
+            year = Date.([2002, 2002]),
+            hid = [1, 2],
+            imputation = [1, 1],
+            wealth = [1000.0, 2000.0],
+            weight = [1.0, 1.0],
+        )
+
+        ef_ii = EconRepeatedCrossSection(ii_df, TestSource(), Individual(), Annual(), :year; currency=NominalEUR())
+        ef_hh = EconRepeatedCrossSection(hh_df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
+
+        es = EconSet(Dict(:ii => ef_ii, :hh => ef_hh), (:ii, :hh) => [:year, :hid, :imputation])
+        out = collapse(es, :hh, :ii, :age => only_head => :age_head)
+
+        @test :age_head in names(out)
+        @test out.age_head == [40, 50]
+    end
+end
+
 function test_getindex_single_column_returns_vector()
     @testset "Single column getindex returns vector" begin
         rcs_df = DataFrame(

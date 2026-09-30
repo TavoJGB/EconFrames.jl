@@ -31,6 +31,7 @@ end
     test_monetary_metadata_persistence()
     test_collapse_preserves_monetary_metadata()
     test_collapse_dropmissing_new_variables()
+    test_collapse_only_head_with_output_name()
     test_getindex_single_column_returns_vector()
 end
 
