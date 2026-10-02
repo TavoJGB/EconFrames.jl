@@ -108,7 +108,7 @@ function test_collapse_only_head_with_output_name()
         es = EconSet(Dict(:ii => ef_ii, :hh => ef_hh), (:ii, :hh) => [:year, :hid, :imputation])
         out = collapse(es, :hh, :ii, :age => only_head => :age_head)
 
-        @test :age_head in names(out)
+        @test "age_head" in names(out)
         @test out.age_head == [40, 50]
     end
 end
