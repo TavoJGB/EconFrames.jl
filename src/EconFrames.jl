@@ -47,6 +47,6 @@ module EconFrames
     include(joinpath(BASE_FOLDER, "src", "dep", "compat_inflation.jl"))
         export to_real!, to_nominal!, rebase!
     include(joinpath(BASE_FOLDER, "src", "dep", "groups.jl"))
-        export assign_groups!, groupby!, assign_quantiles!
+        export assign_groups!, groupby!, assign_quantiles!, combine
 
 end
