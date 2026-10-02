@@ -2,7 +2,7 @@
 
 julia_version = "1.12.7"
 manifest_format = "2.0"
-project_hash = "334d5ab91037e91ccba36658fcdfe6a048cf9270"
+project_hash = "73ebf091531a5efc34c58e297110ec40a2809e64"
 
 [[deps.AliasTables]]
 deps = ["PtrArrays", "Random"]
@@ -83,25 +83,15 @@ uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 version = "0.9.5"
 
 [[deps.EconFrames]]
-deps = ["CSV", "DataFrames", "Dates", "EconStats", "EconVariables", "Parameters", "Reexport", "StatsBase"]
+deps = ["CSV", "DataFrames", "Dates", "Parameters", "Reexport", "StatsBase"]
 path = "."
 uuid = "d0f1779d-20ea-47f6-8e33-fa6a588e0d79"
 version = "1.0.0-DEV"
 
 [[deps.EconStats]]
 deps = ["StatsBase"]
-git-tree-sha1 = "f8bcd2fe38995083b706e6edfd830bfb6d11046c"
-repo-rev = "main"
-repo-url = "https://github.com/TavoJGB/EconStats.jl"
+git-tree-sha1 = "6c546266a7b66ceb1f48dffa644fa670135197b1"
 uuid = "f0e7e95f-09d5-42c4-913f-11006a2aff60"
-version = "1.0.0-DEV"
-
-[[deps.EconVariables]]
-deps = ["Dates", "EconStats", "Parameters", "StatsBase"]
-git-tree-sha1 = "5aad55fa648c2907b82916b9b02e236bc4128dc1"
-repo-rev = "main"
-repo-url = "https://github.com/TavoJGB/EconVariables.jl"
-uuid = "f1f4d348-8162-412b-9f52-fe17ce20fcd0"
 version = "1.0.0-DEV"
 
 [[deps.FilePathsBase]]

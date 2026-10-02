@@ -30,11 +30,12 @@
 
 ## Installation
 
-EconFrames.jl is not registered in Julia's General registry. To install it directly from GitHub:
+EconFrames.jl is not registered in Julia's General registry. Add the custom registry once, then install EconFrames normally:
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/TavoJGB/EconFrames.jl")
+Pkg.Registry.add(url="https://github.com/TavoJGB/EconRegistry.git")
+Pkg.add("EconFrames")
 ```
 
 The package depends on companion packages [EconVariables.jl](https://github.com/TavoJGB/EconVariables.jl) and [EconStats.jl](https://github.com/TavoJGB/EconStats.jl), which are re-exported automatically.
