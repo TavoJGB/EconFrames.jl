@@ -425,27 +425,15 @@ end
 
 # Two-stage combine for multiple imputations:
 # first within imputation, then average across imputations.
-function _combine_with_imputation(
-    data::DataFrame, groupcols, args...;
-    weight_var, imputation_var, skip_basic::Bool=false, kwargs...
-)
+function _combine_with_imputation(data::DataFrame, groupcols, args...; imputation_var, kwargs...)
     groupcols_vec = _groupcols_vec(groupcols)
 
     # First stage
-    df_stage1 = _combine_standard(
-        data, [groupcols_vec..., imputation_var], args...;
-        weight_var, skip_basic, kwargs...
-    )
+    df_stage1 = _combine_standard(data, [groupcols_vec..., imputation_var], args...; kwargs...)
 
     # Second stage: combine across imputations
     ops = _across_imputation_ops(df_stage1, groupcols_vec, imputation_var)
-    skip_basic && return combine(groupby(df_stage1, groupcols_vec; skipmissing=true), ops...; skip_basic)
-
-    basic_fs = (
-        :N => mean => :N,
-        :weight => mean => :weight
-    )
-    return combine(groupby(df_stage1, groupcols_vec; skipmissing=true), basic_fs..., ops...; skip_basic=true)
+    return combine(groupby(df_stage1, groupcols_vec; skipmissing=true), ops...)
 end
 
 # combine
