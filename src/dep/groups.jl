@@ -448,13 +448,13 @@ function _combine_with_imputation(
 
     # Second stage: combine across imputations
     ops = _across_imputation_ops(df_stage1, groupcols_vec, imputation_var)
-    skip_basic && return combine(groupby(df_stage1, groupcols_vec; skipmissing=true), ops...)
+    skip_basic && return combine(groupby(df_stage1, groupcols_vec; skipmissing=true), ops...; skip_basic)
 
     basic_fs = (
         :N => mean => :N,
         :weight => mean => :weight
     )
-    return combine(groupby(df_stage1, groupcols_vec; skipmissing=true), basic_fs..., ops...)
+    return combine(groupby(df_stage1, groupcols_vec; skipmissing=true), basic_fs..., ops...; skip_basic=true)
 end
 
 # combine
