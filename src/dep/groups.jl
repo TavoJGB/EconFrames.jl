@@ -410,12 +410,8 @@ end
 
 # Standard grouped combine (single stage)
 function _combine_standard(
-    data::DataFrame,
-    groupcols,
-    args...;
-    weight_var,
-    skip_basic::Bool=false,
-    kwargs...
+    data::DataFrame, groupcols, args...;
+    weight_var, skip_basic::Bool=false, kwargs...
 )
     gdf = groupby(data, _groupcols_vec(groupcols); skipmissing=true)
     skip_basic && return combine(gdf, args...; kwargs...)
@@ -430,13 +426,8 @@ end
 # Two-stage combine for multiple imputations:
 # first within imputation, then average across imputations.
 function _combine_with_imputation(
-    data::DataFrame,
-    groupcols,
-    args...;
-    weight_var,
-    imputation_var,
-    skip_basic::Bool=false,
-    kwargs...
+    data::DataFrame, groupcols, args...;
+    weight_var, imputation_var, skip_basic::Bool=false, kwargs...
 )
     groupcols_vec = _groupcols_vec(groupcols)
 
