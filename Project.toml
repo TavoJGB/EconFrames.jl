@@ -1,6 +1,6 @@
 name = "EconFrames"
 uuid = "d0f1779d-20ea-47f6-8e33-fa6a588e0d79"
-version = "1.0.1-DEV"
+version = "1.0.2-DEV"
 authors = ["Gustavo Julio García Bernal"]
 
 [deps]
