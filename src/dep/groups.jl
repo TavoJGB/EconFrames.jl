@@ -377,16 +377,21 @@ transform!(psid, :year, :wealth => (x -> x ./ mean(x)) => :wealth_normalized)
 """
 DataFrames.groupby(ef::EconFrame, args...; kwargs...) = DataFrames.groupby(ef.data, args...; kwargs...)
 
+# Normalize grouping columns to a vector for consistent internal handling.
+_groupcols_vec(groupcols::AbstractVector) = collect(groupcols)
+_groupcols_vec(groupcols::Tuple) = collect(groupcols)
+_groupcols_vec(groupcols) = [groupcols]
+
 # Helper: return true when we should run the two-stage combine:
 # first within imputation, then average across imputations.
 function _use_two_stage_operation(groupcols, imputation_var)
     isnothing(imputation_var) && return false
-    return !(Symbol(imputation_var) in Symbol.(groupcols))
+    return !(Symbol(imputation_var) in Symbol.(_groupcols_vec(groupcols)))
 end
 
 # Add second-stage grouped operation (across imputations)
 function _across_imputation_ops(df::DataFrame, groupcols, imputation_var)
-    by_cols = Symbol.(groupcols)
+    by_cols = Symbol.(_groupcols_vec(groupcols))
     excluded = Set(vcat(by_cols, [Symbol(imputation_var)]))
     value_cols = [c for c in Symbol.(names(df)) if !(c in excluded)]
 
@@ -412,7 +417,7 @@ function _combine_standard(
     skip_basic::Bool=false,
     kwargs...
 )
-    gdf = groupby(data, groupcols; skipmissing=true)
+    gdf = groupby(data, _groupcols_vec(groupcols); skipmissing=true)
     skip_basic && return combine(gdf, args...; kwargs...)
 
     basic_fs = (
@@ -433,21 +438,23 @@ function _combine_with_imputation(
     skip_basic::Bool=false,
     kwargs...
 )
+    groupcols_vec = _groupcols_vec(groupcols)
+
     # First stage
     df_stage1 = _combine_standard(
-        data, [groupcols..., imputation_var], args...;
+        data, [groupcols_vec..., imputation_var], args...;
         weight_var, skip_basic, kwargs...
     )
 
     # Second stage: combine across imputations
-    ops = _across_imputation_ops(df_stage1, groupcols, imputation_var)
-    skip_basic && return combine(groupby(df_stage1, groupcols; skipmissing=true), ops...)
+    ops = _across_imputation_ops(df_stage1, groupcols_vec, imputation_var)
+    skip_basic && return combine(groupby(df_stage1, groupcols_vec; skipmissing=true), ops...)
 
     basic_fs = (
         :N => mean => :N,
         :weight => mean => :weight
     )
-    return combine(groupby(df_stage1, groupcols; skipmissing=true), basic_fs..., ops...)
+    return combine(groupby(df_stage1, groupcols_vec; skipmissing=true), basic_fs..., ops...)
 end
 
 # combine
@@ -561,7 +568,13 @@ function DataFrames.transform!(ef::EconFrame, groupcols, args...; kwargs...)
     saved_meta = df_save_metadata(ef)
     
     # Perform grouped transformation
-    gdf = groupby(ef.data, [groupcols..., ef.imputation_var])
+    use_two_stage = _use_two_stage_operation(groupcols, ef.imputation_var)
+    groupcols_vec = _groupcols_vec(groupcols)
+    if use_two_stage
+        gdf = groupby(ef.data, [groupcols_vec..., ef.imputation_var])
+    else
+        gdf = groupby(ef.data, groupcols_vec)
+    end
     transform!(gdf, args...; kwargs...)
     ef.N = nrow(ef.data)
     
