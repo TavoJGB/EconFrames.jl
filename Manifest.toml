@@ -2,7 +2,7 @@
 
 julia_version = "1.12.7"
 manifest_format = "2.0"
-project_hash = "334d5ab91037e91ccba36658fcdfe6a048cf9270"
+project_hash = "8923e1838d16c3d043934f2c0404ad54b8403ebe"
 
 [[deps.AliasTables]]
 deps = ["PtrArrays", "Random"]
@@ -97,8 +97,6 @@ version = "1.0.0-DEV"
 [[deps.EconVariables]]
 deps = ["Dates", "EconStats", "Parameters", "StatsBase"]
 git-tree-sha1 = "5aad55fa648c2907b82916b9b02e236bc4128dc1"
-repo-rev = "main"
-repo-url = "https://github.com/TavoJGB/EconVariables.jl"
 uuid = "f1f4d348-8162-412b-9f52-fe17ce20fcd0"
 version = "1.0.0-DEV"
 
