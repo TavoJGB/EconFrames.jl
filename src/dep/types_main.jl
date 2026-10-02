@@ -5,7 +5,7 @@
 
 abstract type EconFrame end
 
-mutable struct EconRepeatedCrossSection{Ds<:DataSource, Dl<:DataSubject, Df<:DataFrequency} <: EconFrame
+mutable struct EconRepeatedCrossSection{Ds, Dl, Df<:DataFrequency} <: EconFrame
     # Data
     data::DataFrame
     # Data characteristics
@@ -20,12 +20,12 @@ mutable struct EconRepeatedCrossSection{Ds<:DataSource, Dl<:DataSubject, Df<:Dat
     function EconRepeatedCrossSection(
         data::DataFrame, source::Ds, subject::Dl, frequency::Df, date_var::Union{Symbol,String};
         currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
-    ) where {Ds<:DataSource, Dl<:DataSubject, Df<:DataFrequency}
+    ) where {Ds, Dl, Df<:DataFrequency}
         # data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
         return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, weight_var)
     end
 end
-mutable struct EconPanel{Ds<:DataSource, Dl<:DataSubject, Df<:DataFrequency} <: EconFrame
+mutable struct EconPanel{Ds, Dl, Df<:DataFrequency} <: EconFrame
     # Data
     data::DataFrame
     # Data characteristics
@@ -41,12 +41,12 @@ mutable struct EconPanel{Ds<:DataSource, Dl<:DataSubject, Df<:DataFrequency} <: 
     function EconPanel(
         data::DataFrame, source::Ds, subject::Dl, frequency::Df, date_var::Union{Symbol,String}, id_var::Union{Symbol,String};
         currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
-    ) where {Ds<:DataSource, Dl<:DataSubject, Df<:DataFrequency}
+    ) where {Ds, Dl, Df<:DataFrequency}
         # data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
         return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, id_var, weight_var)
     end
 end
-mutable struct EconCrossSection{Ds<:DataSource, Dl<:DataSubject} <: EconFrame
+mutable struct EconCrossSection{Ds, Dl} <: EconFrame
     # Data
     data::DataFrame
     # Data characteristics
@@ -60,10 +60,15 @@ mutable struct EconCrossSection{Ds<:DataSource, Dl<:DataSubject} <: EconFrame
     function EconCrossSection(
         data::DataFrame, source::Ds, subject::Dl, date::Any;
         currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
-    ) where {Ds<:DataSource, Dl<:DataSubject}
+    ) where {Ds, Dl}
         return new{Ds, Dl}(data, source, subject, currency, date, weight_var)
     end
 end
+
+_typeparam_name(::Type{T}) where {T} = string(T)
+_typeparam_name(::Type{T}) where {T<:DataSource} = string(T.name.name)
+_typeparam_name(::Type{T}) where {T<:DataSubject} = string(T.name.name)
+_typeparam_name(::Type{T}) where {T<:DataFrequency} = string(T.name.name)
 
 # Methods
 # Mark columns as monetary variables (they will use the EconFrame's currency)
@@ -371,9 +376,12 @@ function Base.show(io::IO, ef::EconRepeatedCrossSection{Ds,Dl,Df}) where {Ds,Dl,
     
     # Get currency string
     curr_str = currency_string(ef.currency)
+    source_tp = _typeparam_name(Ds)
+    subject_tp = _typeparam_name(Dl)
+    frequency_tp = _typeparam_name(Df)
     
     # Print type with abbreviated date range
-    print(io, "EconRepeatedCrossSection{$(Ds.name.name), $(Dl.name.name), $(Df.name.name), $curr_str}(")
+    print(io, "EconRepeatedCrossSection{$source_tp, $subject_tp, $frequency_tp, $curr_str}(")
     print(io, "$(ef.source), $(ef.subject), $(ef.frequency), ")
     print(io, "dates: $date_range, ")
     print(io, "currency: $curr_str, ")
@@ -400,9 +408,12 @@ function Base.show(io::IO, ef::EconPanel{Ds,Dl,Df}) where {Ds,Dl,Df}
     
     # Get currency string
     curr_str = currency_string(ef.currency)
+    source_tp = _typeparam_name(Ds)
+    subject_tp = _typeparam_name(Dl)
+    frequency_tp = _typeparam_name(Df)
     
     # Print type with panel info
-    print(io, "EconPanel{$(Ds.name.name), $(Dl.name.name), $(Df.name.name), $curr_str}(")
+    print(io, "EconPanel{$source_tp, $subject_tp, $frequency_tp, $curr_str}(")
     print(io, "$(ef.source), $(ef.subject), $(ef.frequency), ")
     print(io, "dates: $date_range, ")
     print(io, "$n_individuals individuals, $n_periods periods, ")
