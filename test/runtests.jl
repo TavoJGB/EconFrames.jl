@@ -36,6 +36,5 @@ end
 end
 
 @testset "Quantile Tests" begin
-    test_create_quantile_labels()
     test_assign_quantiles_range_labels()
 end

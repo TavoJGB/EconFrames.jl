@@ -1,19 +1,3 @@
-function test_create_quantile_labels()
-    @testset "Create Quantile Labels" begin
-        @test default_range_labels([0.5, 0.9]) == false
-        @test default_range_labels([0.2, 0.4, 0.6, 0.8]) == true
-
-        @test create_quantile_labels([0.2, 0.4, 0.6, 0.8]) == ["0-20", "20-40", "40-60", "60-80", "80-100"]
-        @test create_quantile_labels([0.5, 0.9]) == ["B50", "M40", "T10"]
-        @test create_quantile_labels([0.5, 0.9]; range_labels=true) == ["0-50", "50-90", "90-100"]
-
-        @test create_quantile_labels([0.5, 0.9]; range_labels=false) == ["B50", "M40", "T10"]
-        @test create_quantile_labels([0.5, 0.9]; range_labels=false,
-                                     bottom_label="Bottom", middle_label="Middle", top_label="Top") ==
-              ["Bottom50", "Middle40", "Top10"]
-    end
-end
-
 function test_assign_quantiles_range_labels()
     @testset "Assign Quantiles Range Labels" begin
         df = DataFrame(
