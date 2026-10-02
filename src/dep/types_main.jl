@@ -16,13 +16,19 @@ mutable struct EconRepeatedCrossSection{Ds, Dl, Df<:DataFrequency} <: EconFrame
     # Key columns
     date_var::Union{Symbol,String}
     weight_var::Union{Symbol,String}
+    imputation_var::Union{Nothing,Symbol,String}
     # Constructors
     function EconRepeatedCrossSection(
         data::DataFrame, source::Ds, subject::Dl, frequency::Df, date_var::Union{Symbol,String};
-        currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
+        currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight,
+        imputation_var::Union{Nothing,Symbol,String}=nothing
     ) where {Ds, Dl, Df<:DataFrequency}
+        if !isnothing(imputation_var)
+            imputation_col = Symbol(imputation_var)
+            imputation_col in Symbol.(names(data)) || throw(ArgumentError("imputation_var $(imputation_var) not found in data"))
+        end
         # data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
-        return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, weight_var)
+        return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, weight_var, imputation_var)
     end
 end
 mutable struct EconPanel{Ds, Dl, Df<:DataFrequency} <: EconFrame
@@ -37,13 +43,19 @@ mutable struct EconPanel{Ds, Dl, Df<:DataFrequency} <: EconFrame
     date_var::Union{Symbol,String}
     id_var::Union{Symbol,String}
     weight_var::Union{Symbol,String}
+    imputation_var::Union{Nothing,Symbol,String}
     # Constructor
     function EconPanel(
         data::DataFrame, source::Ds, subject::Dl, frequency::Df, date_var::Union{Symbol,String}, id_var::Union{Symbol,String};
-        currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
+        currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight,
+        imputation_var::Union{Nothing,Symbol,String}=nothing
     ) where {Ds, Dl, Df<:DataFrequency}
+        if !isnothing(imputation_var)
+            imputation_col = Symbol(imputation_var)
+            imputation_col in Symbol.(names(data)) || throw(ArgumentError("imputation_var $(imputation_var) not found in data"))
+        end
         # data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
-        return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, id_var, weight_var)
+        return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, id_var, weight_var, imputation_var)
     end
 end
 mutable struct EconCrossSection{Ds, Dl} <: EconFrame
@@ -56,12 +68,18 @@ mutable struct EconCrossSection{Ds, Dl} <: EconFrame
     date::Any
     # Key columns
     weight_var::Union{Symbol,String}
+    imputation_var::Union{Nothing,Symbol,String}
     # Constructor
     function EconCrossSection(
         data::DataFrame, source::Ds, subject::Dl, date::Any;
-        currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight
+        currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight,
+        imputation_var::Union{Nothing,Symbol,String}=nothing
     ) where {Ds, Dl}
-        return new{Ds, Dl}(data, source, subject, currency, date, weight_var)
+        if !isnothing(imputation_var)
+            imputation_col = Symbol(imputation_var)
+            imputation_col in Symbol.(names(data)) || throw(ArgumentError("imputation_var $(imputation_var) not found in data"))
+        end
+        return new{Ds, Dl}(data, source, subject, currency, date, weight_var, imputation_var)
     end
 end
 
@@ -178,9 +196,10 @@ function reconstruct(
     frequency=ef.frequency, 
     currency=ef.currency,
     date_var=ef.date_var,
-    weight_var=ef.weight_var
+    weight_var=ef.weight_var,
+    imputation_var=ef.imputation_var
 )
-    return EconRepeatedCrossSection(data, source, subject, frequency, date_var; currency, weight_var)
+    return EconRepeatedCrossSection(data, source, subject, frequency, date_var; currency, weight_var, imputation_var)
 end
 function reconstruct(
     ef::EconPanel; 
@@ -191,9 +210,10 @@ function reconstruct(
     currency=ef.currency,
     date_var=ef.date_var,
     id_var=ef.id_var,
-    weight_var=ef.weight_var
+    weight_var=ef.weight_var,
+    imputation_var=ef.imputation_var
 )
-    return EconPanel(data, source, subject, frequency, date_var, id_var; currency, weight_var)
+    return EconPanel(data, source, subject, frequency, date_var, id_var; currency, weight_var, imputation_var)
 end
 function reconstruct(
     ef::EconCrossSection;
@@ -202,9 +222,10 @@ function reconstruct(
     subject=ef.subject,
     currency=ef.currency,
     date=ef.date,
-    weight_var=ef.weight_var
+    weight_var=ef.weight_var,
+    imputation_var=ef.imputation_var
 )
-    return EconCrossSection(data, source, subject, date; currency, weight_var)
+    return EconCrossSection(data, source, subject, date; currency, weight_var, imputation_var)
 end
 
 # Base methods

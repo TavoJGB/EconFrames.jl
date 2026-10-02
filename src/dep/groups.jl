@@ -377,6 +377,74 @@ transform!(psid, :year, :wealth => (x -> x ./ mean(x)) => :wealth_normalized)
 """
 DataFrames.groupby(ef::EconFrame, args...; kwargs...) = DataFrames.groupby(ef.data, args...; kwargs...)
 
+# Helpers for imputation-aware grouped operations
+_groupcols_vec(groupcols::AbstractVector) = collect(groupcols)
+_groupcols_vec(groupcols::Tuple) = collect(groupcols)
+_groupcols_vec(groupcols) = [groupcols]
+
+# Add imputation var for first stage of grouped operations
+function _groupcols_with_imputation(groupcols, imputation_var)
+    gcols = _groupcols_vec(groupcols)
+    isnothing(imputation_var) && return gcols
+    imp_sym = Symbol(imputation_var)
+    gcols_syms = Symbol.(gcols)
+    imp_sym in gcols_syms && return gcols
+    return [gcols..., imputation_var]
+end
+
+# Add second-stage grouped operation (across imputations)
+function _across_imputation_ops(df::DataFrame, groupcols, imputation_var)
+    by_cols = Symbol.(_groupcols_vec(groupcols))
+    excluded = Set(vcat(by_cols, [Symbol(imputation_var)]))
+    value_cols = [c for c in Symbol.(names(df)) if !(c in excluded)]
+
+    ops = Any[]
+    for col in value_cols
+        T = nonmissingtype(eltype(df[!, col]))
+        if T <: Real
+            push!(ops, col => mean => col)
+        else
+            @warn "Column $col is not of a numeric type; using first non-missing value instead"
+            push!(ops, col => (x -> all(ismissing.(x)) ? missing : first(skipmissing(x))) => col)
+        end
+    end
+    return ops
+end
+
+# Combine with imputation handling (first and second stage)
+function _combine_with_imputation(
+    data::DataFrame,
+    groupcols,
+    args...;
+    weight_var,
+    imputation_var,
+    skip_basic::Bool=false,
+    kwargs...
+)
+
+    # FIRST STAGE: group also across imputations
+    groupcols_stage1 = _groupcols_with_imputation(groupcols, imputation_var)
+    gdf = groupby(data, groupcols_stage1; skipmissing=true)
+
+    if skip_basic
+        df_stage1 = combine(gdf, args...; kwargs...)
+    else
+        basic_fs = (
+            weight_var => length => :N,
+            weight_var => sum => :weight
+        )
+        df_stage1 = combine(gdf, basic_fs..., args...; kwargs...)
+    end
+
+    # SECOND STAGE: combine across imputations (unless explicit grouping by imputation)
+    isnothing(imputation_var) && return df_stage1
+    groupcols_requested = _groupcols_vec(groupcols)
+    Symbol(imputation_var) in Symbol.(groupcols_requested) && return df_stage1
+    ops = _across_imputation_ops(df_stage1, groupcols_requested, imputation_var)
+    isempty(groupcols_requested) && return combine(df_stage1, ops...)
+    return combine(groupby(df_stage1, groupcols_requested; skipmissing=true), ops...)
+end
+
 # combine
 """
     combine(ef::EconFrame, groupcols, args...; kwargs...)
@@ -401,17 +469,16 @@ function DataFrames.combine(
     ef::EconFrame, groupcols, args...;
     skip_basic::Bool=false, kwargs...
 )
-    @unpack data, weight_var = ef;
-    gdf = groupby(data, groupcols; skipmissing=true)
-    if skip_basic
-        df_combined = combine(gdf, args...; kwargs...)
-    else
-        basic_fs = (
-            weight_var => length => :N,
-            weight_var => sum => :weight
-        )
-        df_combined = combine(gdf, basic_fs..., args...; kwargs...)
-    end
+    @unpack data, weight_var, imputation_var = ef;
+    df_combined = _combine_with_imputation(
+        data,
+        groupcols,
+        args...;
+        weight_var,
+        imputation_var,
+        skip_basic,
+        kwargs...
+    )
     return reconstruct(ef; data=df_combined)
 end
 
@@ -434,23 +501,21 @@ function DataFrames.combine(
     ef::EconPanel, groupcols, args...;
     skip_basic::Bool=false, kwargs...
 )
-    @unpack data, weight_var, date_var = ef;
-    gdf = groupby(data, groupcols; skipmissing=true)
-    
-    if skip_basic
-        df_combined = combine(gdf, args...; kwargs...)
-    else
-        basic_fs = (
-            weight_var => length => :N,
-            weight_var => sum => :weight
-        )
-        df_combined = combine(gdf, basic_fs..., args...; kwargs...)
-    end
+    @unpack data, weight_var, date_var, imputation_var = ef;
+    df_combined = _combine_with_imputation(
+        data,
+        groupcols,
+        args...;
+        weight_var,
+        imputation_var,
+        skip_basic,
+        kwargs...
+    )
     
     # Return EconRepeatedCrossSection (panel structure is lost after combine)
     return EconRepeatedCrossSection(
         df_combined, ef.source, ef.subject, ef.frequency, date_var;
-        currency=ef.currency, weight_var
+        currency=ef.currency, weight_var, imputation_var
     )
 end
 
@@ -483,7 +548,8 @@ function DataFrames.transform!(ef::EconFrame, groupcols, args...; kwargs...)
     saved_meta = df_save_metadata(ef)
     
     # Perform grouped transformation
-    gdf = groupby(ef.data, groupcols)
+    groupcols_eff = _groupcols_with_imputation(groupcols, ef.imputation_var)
+    gdf = groupby(ef.data, groupcols_eff)
     transform!(gdf, args...; kwargs...)
     ef.N = nrow(ef.data)
     

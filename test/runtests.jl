@@ -12,6 +12,7 @@ include(joinpath("dep", "test_inflation.jl"))
 include(joinpath("dep", "test_filter.jl"))
 include(joinpath("dep", "test_monetary_metadata.jl"))
 include(joinpath("dep", "test_quantiles.jl"))
+include(joinpath("dep", "test_imputation.jl"))
 
 # Auxiliary good type
 struct OtherGood <: EconVariables.SomeGood end
@@ -37,4 +38,9 @@ end
 
 @testset "Quantile Tests" begin
     test_assign_quantiles_range_labels()
+end
+
+@testset "Imputation Tests" begin
+    test_combine_multiple_imputation_two_stage()
+    test_combine_single_imputation_passthrough()
 end
