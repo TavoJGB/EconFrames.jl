@@ -22,6 +22,7 @@ struct OtherGood <: EconVariables.SomeGood end
     test_econframe_multiple_cpis()
     test_econframe_partial_matching()
     test_econframe_already_converted()
+    test_column_level_to_real_assignment_updates_frame_currency()
 end
 
 @testset "Filter Tests" begin

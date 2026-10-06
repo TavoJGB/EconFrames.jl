@@ -151,3 +151,24 @@ function test_econframe_already_converted()
         @test_logs (:warn, r"not in real terms") to_nominal!(ef, cpi)
     end
 end
+
+function test_column_level_to_real_assignment_updates_frame_currency()
+    @testset "Column-level to_real assignment updates frame currency" begin
+        df = DataFrame(
+            year = Date.([2008, 2009, 2010]),
+            income = [1000.0, 1050.0, 1100.0]
+        )
+
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
+        monetary_variable!(ef, :income)
+
+        cpi = CPI([2007, 2008, 2009], [98.0, 100.0, 103.0], AnyGood())
+
+        ef.income = to_real(ef.income, cpi, year.(ef.year) .- 1, 2008)
+
+        @test currency(ef) isa RealEUR{2008}
+        @test currency(ef.income) isa RealEUR{2008}
+
+        @test_logs (:warn, r"already in real terms") to_real!(ef, cpi, 2008)
+    end
+end

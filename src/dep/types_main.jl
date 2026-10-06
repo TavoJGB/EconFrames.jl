@@ -252,6 +252,7 @@ function Base.setproperty!(ef::EconFrame, s::Symbol, val)
         ef.data[!, s] = Vector(val)
         colmetadata!(ef.data, s, "is_monetary", true; style=:note)
         colmetadata!(ef.data, s, "good_type", val.good; style=:note)
+        ef.currency = currency(val)
         return val
     else
         return setproperty!(ef.data, s, val)
