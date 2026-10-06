@@ -252,7 +252,7 @@ function Base.setproperty!(ef::EconFrame, s::Symbol, val)
         ef.data[!, s] = Vector(val)
         colmetadata!(ef.data, s, "is_monetary", true; style=:note)
         colmetadata!(ef.data, s, "good_type", val.good; style=:note)
-        ef.currency = currency(val)
+        colmetadata!(ef.data, s, "currency", currency(val); style=:note)
         return val
     else
         return setproperty!(ef.data, s, val)
@@ -262,12 +262,14 @@ end
 # Metadata helpers
 _is_monetary(df::DataFrame, col::Symbol) = "is_monetary" in colmetadatakeys(df, col) && colmetadata(df, col, "is_monetary")
 _col_good_type(df::DataFrame, col::Symbol) = "good_type" in colmetadatakeys(df, col) ? colmetadata(df, col, "good_type") : AnyGood()
+_col_currency(df::DataFrame, col::Symbol, fallback::Currency) = "currency" in colmetadatakeys(df, col) ? colmetadata(df, col, "currency") : fallback
 
 # Wrap monetary columns in MonetaryVariable when accessed via getproperty
 function _maybe_wrap_monetary(ef::EconFrame, col::AbstractVector, s::Symbol)
     (_is_monetary(ef.data, s) && nonmissingtype(eltype(col)) <: Real) || return col
     data = col isa Vector ? col : collect(col)
-    return MonetaryVariable(data, _get_frequency(ef), getfield(ef, :subject), getfield(ef, :currency), _col_good_type(ef.data, s))
+    col_curr = _col_currency(ef.data, s, getfield(ef, :currency))
+    return MonetaryVariable(data, _get_frequency(ef), getfield(ef, :subject), col_curr, _col_good_type(ef.data, s))
 end
 
 # Frequency accessor for _wrap_monetary (EconCrossSection has no frequency field)

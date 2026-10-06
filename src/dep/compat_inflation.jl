@@ -67,6 +67,7 @@ function price_conversion!(
         
         if !isnothing(matching_cpi)
             ef.data[!, var] .= conversion_fn(ef.data[!, var], matching_cpi, args...)
+            colmetadata!(ef.data, var, "currency", new_currency; style=:note)
         else
             push!(unconverted_vars, var)
             # Store pre-conversion currency in metadata (only for to_real)

@@ -153,22 +153,25 @@ function test_econframe_already_converted()
 end
 
 function test_column_level_to_real_assignment_updates_frame_currency()
-    @testset "Column-level to_real assignment updates frame currency" begin
+    @testset "Column-level to_real assignment is column-local" begin
         df = DataFrame(
             year = Date.([2008, 2009, 2010]),
-            income = [1000.0, 1050.0, 1100.0]
+            income = [1000.0, 1050.0, 1100.0],
+            lab_income = [600.0, 630.0, 660.0]
         )
 
         ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
-        monetary_variable!(ef, :income)
+        monetary_variable!(ef, [:income, :lab_income])
 
         cpi = CPI([2007, 2008, 2009], [98.0, 100.0, 103.0], AnyGood())
 
+        lab_income_before = copy(ef.lab_income)
+
         ef.income = to_real(ef.income, cpi, year.(ef.year) .- 1, 2008)
 
-        @test currency(ef) isa RealEUR{2008}
+        @test currency(ef) isa NominalEUR
         @test currency(ef.income) isa RealEUR{2008}
-
-        @test_logs (:warn, r"already in real terms") to_real!(ef, cpi, 2008)
+        @test currency(ef.lab_income) isa NominalEUR
+        @test all(isapprox.(ef.lab_income, lab_income_before, atol=1e-8))
     end
 end
