@@ -167,11 +167,73 @@ function test_column_level_to_real_assignment_updates_frame_currency()
 
         lab_income_before = copy(ef.lab_income)
 
-        ef.income = to_real(ef.income, cpi, year.(ef.year) .- 1, 2008)
+        ef.income = to_real(ef.income, cpi, ef.year, 2008)
+        income_after_first_conversion = copy(ef.income)
 
         @test currency(ef) isa NominalEUR
         @test currency(ef.income) isa RealEUR{2008}
         @test currency(ef.lab_income) isa NominalEUR
         @test all(isapprox.(ef.lab_income, lab_income_before, atol=1e-8))
+
+        to_real!(ef, [cpi], 2008)
+
+        @test currency(ef) isa RealEUR{2008}
+        @test currency(ef.income) isa RealEUR{2008}
+        @test currency(ef.lab_income) isa RealEUR{2008}
+        @test all(isapprox.(ef.income, income_after_first_conversion, atol=1e-8))
+        @test any(.!isapprox.(ef.lab_income, lab_income_before, atol=1e-8))
+    end
+end
+
+function test_frame_level_to_nominal_and_rebase_respect_column_currency()
+    @testset "Frame-level to_nominal!/rebase! are column-aware" begin
+        df = DataFrame(
+            year = Date.([2008, 2009, 2010]),
+            income = [1000.0, 1050.0, 1100.0],
+            lab_income = [600.0, 630.0, 660.0]
+        )
+
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
+        monetary_variable!(ef, [:income, :lab_income])
+
+        cpi = CPI([2007, 2008, 2009], [98.0, 100.0, 103.0], AnyGood())
+
+        # Put both columns in real 2008.
+        to_real!(ef, [cpi], 2008)
+        @test currency(ef.income) isa RealEUR{2008}
+        @test currency(ef.lab_income) isa RealEUR{2008}
+
+        # Convert one column back to nominal at column-level.
+        ef.income = to_nominal(ef.income, cpi, 2008, ef.year)
+        income_after_nominal = copy(ef.income)
+        lab_income_real2008 = copy(ef.lab_income)
+
+        @test currency(ef.income) isa NominalEUR
+        @test currency(ef.lab_income) isa RealEUR{2008}
+
+        # Frame-level to_nominal! should only convert the remaining real column.
+        to_nominal!(ef, [cpi])
+        @test currency(ef.income) isa NominalEUR
+        @test currency(ef.lab_income) isa NominalEUR
+        @test all(isapprox.(ef.income, income_after_nominal, atol=1e-8))
+        @test any(.!isapprox.(ef.lab_income, lab_income_real2008, atol=1e-8))
+
+        # Build mixed real-base state: income already rebased to 2010, lab_income at 2008.
+        ef.income = to_real(ef.income, cpi, ef.year, 2008)
+        ef.income = rebase(ef.income, cpi, 2008, 2010)
+        ef.lab_income = to_real(ef.lab_income, cpi, ef.year, 2008)
+
+        income_real2010 = copy(ef.income)
+        lab_income_real2008_again = copy(ef.lab_income)
+
+        @test currency(ef.income) isa RealEUR{2010}
+        @test currency(ef.lab_income) isa RealEUR{2008}
+
+        # Frame-level rebase! to 2010 should only affect lab_income.
+        rebase!(ef, [cpi], 2010)
+        @test currency(ef.income) isa RealEUR{2010}
+        @test currency(ef.lab_income) isa RealEUR{2010}
+        @test all(isapprox.(ef.income, income_real2010, atol=1e-8))
+        @test any(.!isapprox.(ef.lab_income, lab_income_real2008_again, atol=1e-8))
     end
 end

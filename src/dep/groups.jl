@@ -514,7 +514,7 @@ function DataFrames.combine(
     # Return EconRepeatedCrossSection (panel structure is lost after combine)
     return EconRepeatedCrossSection(
         df_combined, ef.source, ef.subject, ef.frequency, date_var;
-        currency=ef.currency, weight_var, imputation_var=imputation_var_out
+        weight_var, imputation_var=imputation_var_out
     )
 end
 
