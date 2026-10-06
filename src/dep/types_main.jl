@@ -162,9 +162,9 @@ function list_compatible_monetary_variables(ef::EconFrame, tg_cpi::GoodType; ens
 end
 
 # Accessors
-currency(ef::EconFrame) = ef.currency
-frequency(ef::EconFrame) = ef.frequency
-subject(ef::EconFrame) = ef.subject
+EconVariables.currency(ef::EconFrame) = ef.currency
+EconVariables.frequency(ef::EconFrame) = ef.frequency
+EconVariables.subject(ef::EconFrame) = ef.subject
 get_dates(ef::EconRepeatedCrossSection) = ef.data[!, ef.date_var]
 get_dates(ef::EconPanel) = ef.data[!, ef.date_var]
 get_dates(ef::EconCrossSection) = ef.date
