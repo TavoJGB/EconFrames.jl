@@ -12,7 +12,6 @@ mutable struct EconRepeatedCrossSection{Ds, Dl, Df<:DataFrequency} <: EconFrame
     source::Ds
     subject::Dl
     frequency::Df
-    currency::Currency      # Currency for monetary variables (not parametric to allow mutation)
     # Key columns
     date_var::Union{Symbol,String}
     weight_var::Union{Symbol,String}
@@ -20,7 +19,7 @@ mutable struct EconRepeatedCrossSection{Ds, Dl, Df<:DataFrequency} <: EconFrame
     # Constructors
     function EconRepeatedCrossSection(
         data::DataFrame, source::Ds, subject::Dl, frequency::Df, date_var::Union{Symbol,String};
-        currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight,
+        weight_var::Union{Symbol,String}=:weight,
         imputation_var::Union{Nothing,Symbol,String}=nothing
     ) where {Ds, Dl, Df<:DataFrequency}
         if !isnothing(imputation_var)
@@ -28,7 +27,7 @@ mutable struct EconRepeatedCrossSection{Ds, Dl, Df<:DataFrequency} <: EconFrame
             imputation_col in Symbol.(names(data)) || throw(ArgumentError("imputation_var $(imputation_var) not found in data"))
         end
         # data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
-        return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, weight_var, imputation_var)
+        return new{Ds, Dl, Df}(data, source, subject, frequency, date_var, weight_var, imputation_var)
     end
 end
 mutable struct EconPanel{Ds, Dl, Df<:DataFrequency} <: EconFrame
@@ -38,7 +37,6 @@ mutable struct EconPanel{Ds, Dl, Df<:DataFrequency} <: EconFrame
     source::Ds
     subject::Dl
     frequency::Df
-    currency::Currency      # Currency for monetary variables (not parametric to allow mutation)
     # Key columns
     date_var::Union{Symbol,String}
     id_var::Union{Symbol,String}
@@ -47,7 +45,7 @@ mutable struct EconPanel{Ds, Dl, Df<:DataFrequency} <: EconFrame
     # Constructor
     function EconPanel(
         data::DataFrame, source::Ds, subject::Dl, frequency::Df, date_var::Union{Symbol,String}, id_var::Union{Symbol,String};
-        currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight,
+        weight_var::Union{Symbol,String}=:weight,
         imputation_var::Union{Nothing,Symbol,String}=nothing
     ) where {Ds, Dl, Df<:DataFrequency}
         if !isnothing(imputation_var)
@@ -55,7 +53,7 @@ mutable struct EconPanel{Ds, Dl, Df<:DataFrequency} <: EconFrame
             imputation_col in Symbol.(names(data)) || throw(ArgumentError("imputation_var $(imputation_var) not found in data"))
         end
         # data[!, date_var] = Date.(data[!, date_var])  # Ensure date variable is of Date type
-        return new{Ds, Dl, Df}(data, source, subject, frequency, currency, date_var, id_var, weight_var, imputation_var)
+        return new{Ds, Dl, Df}(data, source, subject, frequency, date_var, id_var, weight_var, imputation_var)
     end
 end
 mutable struct EconCrossSection{Ds, Dl} <: EconFrame
@@ -64,7 +62,6 @@ mutable struct EconCrossSection{Ds, Dl} <: EconFrame
     # Data characteristics
     source::Ds
     subject::Dl
-    currency::Currency      # Currency for monetary variables (not parametric to allow mutation)
     date::Any
     # Key columns
     weight_var::Union{Symbol,String}
@@ -72,14 +69,14 @@ mutable struct EconCrossSection{Ds, Dl} <: EconFrame
     # Constructor
     function EconCrossSection(
         data::DataFrame, source::Ds, subject::Dl, date::Any;
-        currency::Currency=NACurrency(), weight_var::Union{Symbol,String}=:weight,
+        weight_var::Union{Symbol,String}=:weight,
         imputation_var::Union{Nothing,Symbol,String}=nothing
     ) where {Ds, Dl}
         if !isnothing(imputation_var)
             imputation_col = Symbol(imputation_var)
             imputation_col in Symbol.(names(data)) || throw(ArgumentError("imputation_var $(imputation_var) not found in data"))
         end
-        return new{Ds, Dl}(data, source, subject, currency, date, weight_var, imputation_var)
+        return new{Ds, Dl}(data, source, subject, date, weight_var, imputation_var)
     end
 end
 
@@ -89,9 +86,9 @@ _typeparam_name(::Type{T}) where {T<:DataSubject} = string(T.name.name)
 _typeparam_name(::Type{T}) where {T<:DataFrequency} = string(T.name.name)
 
 # Methods
-# Mark columns as monetary variables (they will use the EconFrame's currency)
+# Mark columns as monetary variables
 function monetary_variable!(
-    ef::EconFrame, col::Symbol, good_type::GoodType=AnyGood();
+    ef::EconFrame, col::Symbol, curr::Currency, good_type::GoodType=AnyGood();
     do_parse::Bool=true
 )::Nothing
     # Ensure column contains Real numbers
@@ -100,32 +97,38 @@ function monetary_variable!(
     end
     # Set metadata
     colmetadata!(ef.data, col, "is_monetary", true; style=:note)
+    colmetadata!(ef.data, col, "currency", curr; style=:note)
     colmetadata!(ef.data, col, "good_type", good_type; style=:note)
+
     return nothing
 end
-function monetary_variable!(ef::EconFrame, cols::AbstractVector{Symbol}, good_type::GoodType=AnyGood())::Nothing
+function monetary_variable!(
+    ef::EconFrame, cols::AbstractVector{Symbol}, curr::Currency, good_type::GoodType=AnyGood()
+)::Nothing
     # Parse first so later column replacement does not wipe metadata set on earlier columns.
     for col in cols
         if !(eltype(ef.data[!, col]) <: Real)
             ef.data[!, col] = parse.(Float64, string.(ef.data[!, col]))
         end
     end
-
+    # Mark monetary variables
     for col in cols
-        monetary_variable!(ef, col, good_type; do_parse=false)
+        monetary_variable!(ef, col, curr, good_type; do_parse=false)
     end
     return nothing
 end
-function monetary_variable!(ef::EconFrame, cols::AbstractVector{<:Symbol}, good_types::Vector{<:GoodType})::Nothing
+function monetary_variable!(
+    ef::EconFrame, cols::AbstractVector{<:Symbol}, curr::Currency, good_types::Vector{<:GoodType}
+)::Nothing
     # Parse first so later column replacement does not wipe metadata set on earlier columns.
     for col in cols
         if !(eltype(ef.data[!, col]) <: Real)
             ef.data[!, col] = parse.(Float64, string.(ef.data[!, col]))
         end
     end
-
+    # Mark monetary variables
     for (col, good_type) in zip(cols, good_types)
-        monetary_variable!(ef, Symbol(col), good_type; do_parse=false)
+        monetary_variable!(ef, Symbol(col), curr, good_type; do_parse=false)
     end
     return nothing
 end
@@ -162,7 +165,6 @@ function list_compatible_monetary_variables(ef::EconFrame, tg_cpi::GoodType; ens
 end
 
 # Accessors
-EconVariables.currency(ef::EconFrame) = ef.currency
 EconVariables.frequency(ef::EconFrame) = ef.frequency
 EconVariables.subject(ef::EconFrame) = ef.subject
 get_dates(ef::EconRepeatedCrossSection) = ef.data[!, ef.date_var]
@@ -180,12 +182,11 @@ but with specified fields updated via keyword arguments.
 
 # Arguments
 - `ef`: Original EconRepeatedCrossSection
-- `kwargs...`: Fields to update (data, source, subject, frequency, date_var, currency)
+- `kwargs...`: Fields to update (data, source, subject, frequency, date_var)
 
 # Examples
 ```julia
-ef2 = reconstruct(ef; data=new_df, currency=NominalEUR())
-ef3 = reconstruct(ef; currency=RealUSD{2015}())
+ef2 = reconstruct(ef; data=new_df)
 ```
 """
 function reconstruct(
@@ -193,13 +194,12 @@ function reconstruct(
     data=ef.data, 
     source=ef.source, 
     subject=ef.subject, 
-    frequency=ef.frequency, 
-    currency=ef.currency,
+    frequency=ef.frequency,
     date_var=ef.date_var,
     weight_var=ef.weight_var,
     imputation_var=ef.imputation_var
 )
-    return EconRepeatedCrossSection(data, source, subject, frequency, date_var; currency, weight_var, imputation_var)
+    return EconRepeatedCrossSection(data, source, subject, frequency, date_var; weight_var, imputation_var)
 end
 function reconstruct(
     ef::EconPanel; 
@@ -207,25 +207,23 @@ function reconstruct(
     source=ef.source, 
     subject=ef.subject, 
     frequency=ef.frequency, 
-    currency=ef.currency,
     date_var=ef.date_var,
     id_var=ef.id_var,
     weight_var=ef.weight_var,
     imputation_var=ef.imputation_var
 )
-    return EconPanel(data, source, subject, frequency, date_var, id_var; currency, weight_var, imputation_var)
+    return EconPanel(data, source, subject, frequency, date_var, id_var; weight_var, imputation_var)
 end
 function reconstruct(
     ef::EconCrossSection;
     data=ef.data,
     source=ef.source,
     subject=ef.subject,
-    currency=ef.currency,
     date=ef.date,
     weight_var=ef.weight_var,
     imputation_var=ef.imputation_var
 )
-    return EconCrossSection(data, source, subject, date; currency, weight_var, imputation_var)
+    return EconCrossSection(data, source, subject, date; weight_var, imputation_var)
 end
 
 # Base methods
@@ -262,14 +260,12 @@ end
 # Metadata helpers
 _is_monetary(df::DataFrame, col::Symbol) = "is_monetary" in colmetadatakeys(df, col) && colmetadata(df, col, "is_monetary")
 _col_good_type(df::DataFrame, col::Symbol) = "good_type" in colmetadatakeys(df, col) ? colmetadata(df, col, "good_type") : AnyGood()
-_col_currency(df::DataFrame, col::Symbol, fallback::Currency) = "currency" in colmetadatakeys(df, col) ? colmetadata(df, col, "currency") : fallback
 
 # Wrap monetary columns in MonetaryVariable when accessed via getproperty
-function _maybe_wrap_monetary(ef::EconFrame, col::AbstractVector, s::Symbol)
-    (_is_monetary(ef.data, s) && nonmissingtype(eltype(col)) <: Real) || return col
-    data = col isa Vector ? col : collect(col)
-    col_curr = _col_currency(ef.data, s, getfield(ef, :currency))
-    return MonetaryVariable(data, _get_frequency(ef), getfield(ef, :subject), col_curr, _col_good_type(ef.data, s))
+function _maybe_wrap_monetary(ef::EconFrame, vals::AbstractVector, col::Symbol)
+    (_is_monetary(ef.data, col) && nonmissingtype(eltype(vals)) <: Real) || return vals
+    data = vals isa Vector ? vals : collect(vals)
+    return MonetaryVariable(data, _get_frequency(ef), getfield(ef, :subject), colmetadata(ef, col, "currency"), _col_good_type(ef.data, col))
 end
 
 # Frequency accessor for _wrap_monetary (EconCrossSection has no frequency field)
@@ -398,17 +394,15 @@ function Base.show(io::IO, ef::EconRepeatedCrossSection{Ds,Dl,Df}) where {Ds,Dl,
         "$(minimum(dates)) to $(maximum(dates))"
     end
     
-    # Get currency string
-    curr_str = currency_string(ef.currency)
+    # Get relevant strings
     source_tp = _typeparam_name(Ds)
     subject_tp = _typeparam_name(Dl)
     frequency_tp = _typeparam_name(Df)
     
     # Print type with abbreviated date range
-    print(io, "EconRepeatedCrossSection{$source_tp, $subject_tp, $frequency_tp, $curr_str}(")
+    print(io, "EconRepeatedCrossSection{$source_tp, $subject_tp, $frequency_tp}(")
     print(io, "$(ef.source), $(ef.subject), $(ef.frequency), ")
     print(io, "dates: $date_range, ")
-    print(io, "currency: $curr_str, ")
     print(io, "$(nrow(ef)) observations, ")
     print(io, "$(ncol(ef.data))×$(nrow(ef.data)) DataFrame\n")
     show(io, ef.data)
@@ -430,18 +424,16 @@ function Base.show(io::IO, ef::EconPanel{Ds,Dl,Df}) where {Ds,Dl,Df}
     n_individuals = length(unique(ids))
     n_periods = length(unique(dates))
     
-    # Get currency string
-    curr_str = currency_string(ef.currency)
+    # Get relevant strings
     source_tp = _typeparam_name(Ds)
     subject_tp = _typeparam_name(Dl)
     frequency_tp = _typeparam_name(Df)
     
     # Print type with panel info
-    print(io, "EconPanel{$source_tp, $subject_tp, $frequency_tp, $curr_str}(")
+    print(io, "EconPanel{$source_tp, $subject_tp, $frequency_tp}(")
     print(io, "$(ef.source), $(ef.subject), $(ef.frequency), ")
     print(io, "dates: $date_range, ")
     print(io, "$n_individuals individuals, $n_periods periods, ")
-    print(io, "currency: $curr_str, ")
     print(io, "$(nrow(ef)) observations, ")
     print(io, "$(ncol(ef.data))×$(nrow(ef.data)) DataFrame\n")
     show(io, ef.data)

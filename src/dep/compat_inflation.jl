@@ -26,6 +26,20 @@ function match_variable_to_cpi(ef::EconFrame, var::String, cpi_dict::Dict, anygo
 end
 
 """
+    variable_currency(ef::EconFrame, var::String)
+
+Return the currency associated with a monetary variable. Falls back to frame currency
+when per-column currency metadata is not available.
+"""
+function variable_currency(ef::EconFrame, var::String)
+    return if "currency" in colmetadatakeys(ef.data, var)
+        colmetadata(ef.data, var, "currency")
+    else
+        currency(ef)
+    end
+end
+
+"""
     price_conversion!(ef::EconFrame, cpis::AbstractVector{<:CPI}, 
                       conversion_fn::Function, args...; 
                       check_currency::Function, 
@@ -39,12 +53,10 @@ Generic function to apply inflation conversions to all monetary variables in an 
 - `cpis`: Vector of CPIs for different good types
 - `conversion_fn`: Function to apply to each variable (e.g., to_real, to_nominal, rebase)
 - `args...`: Additional arguments to pass to conversion_fn
-- `new_currency`: The new currency to set after conversion
 - `operation_name`: Name of operation for warning messages
 """
 function price_conversion!(
     ef::EconFrame, cpis::AbstractVector{<:CPI}, conversion_fn::Function, args...;
-    new_currency::Currency,
     operation_name::String
 )
     
@@ -66,14 +78,10 @@ function price_conversion!(
         matching_cpi = match_variable_to_cpi(ef, var, cpi_dict, anygood_cpi)
         
         if !isnothing(matching_cpi)
-            ef.data[!, var] .= conversion_fn(ef.data[!, var], matching_cpi, args...)
-            colmetadata!(ef.data, var, "currency", new_currency; style=:note)
+            converted = conversion_fn(getproperty(ef, Symbol(var)), matching_cpi, args...)
+            setproperty!(ef, Symbol(var), converted)
         else
             push!(unconverted_vars, var)
-            # Store pre-conversion currency in metadata (only for to_real)
-            if operation_name == "to_real"
-                colmetadata!(ef.data, var, "currency", currency(ef); style=:note)
-            end
         end
     end
     
@@ -82,7 +90,6 @@ function price_conversion!(
         @warn("No monetary variables were converted in $operation_name.")
     else
         !isempty(unconverted_vars) && @warn("The following variables were not converted in $operation_name (no matching CPI found): $(unconverted_vars)")
-        ef.currency = new_currency
     end
     
     # Restore column metadata (may have been lost during broadcast assignment)
@@ -134,13 +141,11 @@ function to_real!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date)::No
         return nothing
     end
     
-    # Calculate new currency
-    new_currency = real_currency(curr, new_base_date)
     dates = get_dates(ef)
     
     return price_conversion!(
         ef, cpis, to_real, dates, new_base_date;
-        new_currency, operation_name = "to_real"
+        operation_name = "to_real"
     )
 end
 """
@@ -179,8 +184,6 @@ function to_nominal!(ef::EconFrame, cpis::AbstractVector{<:CPI})::Nothing
         return nothing
     end
     
-    # Calculate new currency
-    new_currency = nominal_currency(curr)
     dates = get_dates(ef)
     base = base_date(curr)
     
@@ -188,7 +191,7 @@ function to_nominal!(ef::EconFrame, cpis::AbstractVector{<:CPI})::Nothing
         ef, cpis,
         (var, cpi, dates) -> to_nominal(var, cpi, base, dates),
         dates;
-        new_currency, operation_name = "to_nominal"
+        operation_name = "to_nominal"
     )
 end
 """
@@ -230,10 +233,9 @@ function rebase!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date)::Not
     
     # Calculate new currency
     current_base_date = base_date(curr)
-    new_currency = real_currency(curr, new_base_date)
     
     return price_conversion!(
         ef, cpis, rebase, current_base_date, new_base_date;
-        new_currency, operation_name = "rebase"
+        operation_name = "rebase"
     )
 end
