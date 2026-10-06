@@ -51,12 +51,14 @@ Generic function to apply inflation conversions to all monetary variables in an 
 # Arguments
 - `ef`: EconFrame to modify
 - `cpis`: Vector of CPIs for different good types
+- `conversion_vars`: Vector of monetary variables to convert
 - `conversion_fn`: Function to apply to each variable (e.g., to_real, to_nominal, rebase)
 - `args...`: Additional arguments to pass to conversion_fn
 - `operation_name`: Name of operation for warning messages
 """
 function price_conversion!(
-    ef::EconFrame, cpis::AbstractVector{<:CPI}, conversion_fn::Function, args...;
+    ef::EconFrame, cpis::AbstractVector{<:CPI},
+    conversion_vars::AbstractVector, conversion_fn::Function, args...;
     operation_name::String
 )
     
@@ -66,7 +68,7 @@ function price_conversion!(
     # Build CPI dictionary
     cpi_dict, anygood_cpi = build_cpi_dict(cpis)
     
-    # Get all monetary variables
+    # Preliminaries
     all_mon_vars = list_monetary_variables(ef)
     unconverted_vars = String[]
     
@@ -74,7 +76,7 @@ function price_conversion!(
     saved_meta = df_save_metadata(ef)
     
     # Convert each monetary variable
-    for var in all_mon_vars
+    for var in conversion_vars
         matching_cpi = match_variable_to_cpi(ef, var, cpi_dict, anygood_cpi)
         
         if !isnothing(matching_cpi)
@@ -86,7 +88,7 @@ function price_conversion!(
     end
     
     # Warnings and update currency
-    if length(unconverted_vars) == length(all_mon_vars)
+    if length(unconverted_vars) == length(conversion_vars)
         @warn("No monetary variables were converted in $operation_name.")
     else
         !isempty(unconverted_vars) && @warn("The following variables were not converted in $operation_name (no matching CPI found): $(unconverted_vars)")
@@ -97,6 +99,17 @@ function price_conversion!(
     
     return nothing
 end
+
+
+
+#==========================================================================
+    HELPER FUNCTIONS: type of monetary column
+==========================================================================#
+
+is_nominal_col(ef::EconFrame, col::Union{Symbol, String}) = colmetadata(ef, col)["currency"] isa NominalCurrency
+is_real_col(ef::EconFrame, col::Union{Symbol, String}) = colmetadata(ef, col)["currency"] isa RealCurrency
+
+
 
 #==========================================================================
     HANDLING INFLATION: EconFrame methods
@@ -136,7 +149,18 @@ to_real!(ef::EconFrame, cpi::CPI, new_base_date)::Nothing = to_real!(ef, [cpi], 
 function to_real!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date)::Nothing    
     dates = get_dates(ef)
     
-    return price_conversion!(ef, cpis, to_real, dates, new_base_date; operation_name = "to_real")
+    # Get nominal variables
+    mon_vars = ef |> list_monetary_variables
+    conversion_vars = mon_vars[[is_nominal_col(ef, col) for col in mon_vars]]
+
+    # Warn about skipped variables
+    skipped_vars = setdiff(mon_vars, conversion_vars)
+    if !isempty(skipped_vars)
+        @warn "The following monetary variables were skipped because they are not real: " * join(skipped_vars, ", ")
+    end
+
+    # Returns
+    return price_conversion!(ef, cpis, conversion_vars, to_real, dates, new_base_date; operation_name = "to_real")
 end
 """
     to_nominal!(ef::EconFrame, cpi::CPI)
@@ -169,8 +193,18 @@ to_nominal!(ef::EconFrame, cpi::CPI)::Nothing = to_nominal!(ef, [cpi])
 function to_nominal!(ef::EconFrame, cpis::AbstractVector{<:CPI})::Nothing
     
     dates = get_dates(ef)
+
+    # Get real variables
+    mon_vars = ef |> list_monetary_variables
+    conversion_vars = mon_vars[[is_real_col(ef, col) for col in mon_vars]]
+
+    # Warn about skipped variables
+    skipped_vars = setdiff(mon_vars, conversion_vars)
+    if !isempty(skipped_vars)
+        @warn "The following monetary variables were skipped because they are not real: " * join(skipped_vars, ", ")
+    end
     
-    return price_conversion!(ef, cpis, to_nominal, dates; operation_name = "to_nominal")
+    return price_conversion!(ef, cpis, conversion_vars, to_nominal, dates; operation_name = "to_nominal")
 end
 """
     rebase!(ef::EconFrame, cpi::CPI, new_base_date)
@@ -202,5 +236,16 @@ rebase!(psid, [cpi_consumption, cpi_housing], 1992)
 rebase!(ef::EconFrame, cpi::CPI, new_base_date)::Nothing = rebase!(ef, [cpi], new_base_date)
 
 function rebase!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date)::Nothing
-    return price_conversion!(ef, cpis, rebase, new_base_date; operation_name = "rebase")
+    
+    # Get real variables
+    mon_vars = ef |> list_monetary_variables
+    conversion_vars = mon_vars[[is_real_col(ef, col) for col in mon_vars]]
+
+    # Warn about skipped variables
+    skipped_vars = setdiff(mon_vars, conversion_vars)
+    if !isempty(skipped_vars)
+        @warn "The following monetary variables were skipped because they are not real: " * join(skipped_vars, ", ")
+    end
+
+    return price_conversion!(ef, cpis, conversion_vars, rebase, new_base_date; operation_name = "rebase")
 end
