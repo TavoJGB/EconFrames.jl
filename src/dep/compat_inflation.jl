@@ -55,11 +55,12 @@ Generic function to apply inflation conversions to all monetary variables in an 
 - `conversion_fn`: Function to apply to each variable (e.g., to_real, to_nominal, rebase)
 - `args...`: Additional arguments to pass to conversion_fn
 - `operation_name`: Name of operation for warning messages
+- `kwargs...`: Additional keyword arguments to pass to `conversion_fn`
 """
 function price_conversion!(
     ef::EconFrame, cpis::AbstractVector{<:CPI},
     conversion_vars::AbstractVector, conversion_fn::Function, args...;
-    operation_name::String
+    operation_name::String, kwargs...
 )
     
     # Validate CPIs
@@ -80,7 +81,7 @@ function price_conversion!(
         matching_cpi = match_variable_to_cpi(ef, var, cpi_dict, anygood_cpi)
         
         if !isnothing(matching_cpi)
-            converted = conversion_fn(getproperty(ef, Symbol(var)), matching_cpi, args...)
+            converted = conversion_fn(getproperty(ef, Symbol(var)), matching_cpi, args...; kwargs...)
             setproperty!(ef, Symbol(var), converted)
         else
             push!(unconverted_vars, var)
@@ -116,8 +117,8 @@ is_real_col(ef::EconFrame, col::Union{Symbol, String}) = colmetadata(ef, col)["c
 ==========================================================================#
 
 """
-    to_real!(ef::EconFrame, cpi::CPI, new_base_date)
-    to_real!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date)
+    to_real!(ef::EconFrame, cpi::CPI, new_base_date; do_warn::Bool=true)
+    to_real!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date; do_warn::Bool=true)
 
 Convert nominal monetary variables in an EconFrame to real values.
 
@@ -125,6 +126,7 @@ Convert nominal monetary variables in an EconFrame to real values.
 - `ef`: EconFrame with monetary variables
 - `cpi` or `cpis`: Single CPI or vector of CPIs for different good types
 - `new_base_date`: Base date for real values (e.g., 2007)
+- `do_warn`: Whether to display warnings when the type of good does not match with the available CPIs
 
 # Behavior with multiple CPIs
 When providing multiple CPIs:
@@ -144,9 +146,9 @@ to_real!(psid, cpi_general, 2007)
 to_real!(psid, [cpi_consumption, cpi_housing], 2007)
 ```
 """
-to_real!(ef::EconFrame, cpi::CPI, new_base_date)::Nothing = to_real!(ef, [cpi], new_base_date)
+to_real!(ef::EconFrame, cpi::CPI, new_base_date; do_warn::Bool=true)::Nothing = to_real!(ef, [cpi], new_base_date; do_warn)
 
-function to_real!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date)::Nothing    
+function to_real!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date; do_warn::Bool=true)::Nothing    
     dates = get_dates(ef)
     
     # Get nominal variables
@@ -160,7 +162,7 @@ function to_real!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date)::No
     end
 
     # Returns
-    return price_conversion!(ef, cpis, conversion_vars, to_real, dates, new_base_date; operation_name = "to_real")
+    return price_conversion!(ef, cpis, conversion_vars, to_real, dates, new_base_date; operation_name = "to_real", do_warn)
 end
 """
     to_nominal!(ef::EconFrame, cpi::CPI)
@@ -171,6 +173,8 @@ Convert real monetary variables in an EconFrame back to nominal values.
 # Arguments
 - `ef`: EconFrame with monetary variables in real terms
 - `cpi` or `cpis`: Single CPI or vector of CPIs for different good types
+- `do_warn`: Whether to display warnings when the type of good does not match with the available CPIs (default: `true`)
+
 
 # Behavior with multiple CPIs
 When providing multiple CPIs:
@@ -188,9 +192,9 @@ to_nominal!(psid, cpi_general)
 to_nominal!(psid, [cpi_consumption, cpi_housing])
 ```
 """
-to_nominal!(ef::EconFrame, cpi::CPI)::Nothing = to_nominal!(ef, [cpi])
+to_nominal!(ef::EconFrame, cpi::CPI; do_warn::Bool=true)::Nothing = to_nominal!(ef, [cpi]; do_warn)
 
-function to_nominal!(ef::EconFrame, cpis::AbstractVector{<:CPI})::Nothing
+function to_nominal!(ef::EconFrame, cpis::AbstractVector{<:CPI}; do_warn::Bool=true)::Nothing
     
     dates = get_dates(ef)
 
@@ -204,7 +208,7 @@ function to_nominal!(ef::EconFrame, cpis::AbstractVector{<:CPI})::Nothing
         @warn "The following monetary variables were skipped because they are not real: " * join(skipped_vars, ", ")
     end
     
-    return price_conversion!(ef, cpis, conversion_vars, to_nominal, dates; operation_name = "to_nominal")
+    return price_conversion!(ef, cpis, conversion_vars, to_nominal, dates; operation_name = "to_nominal", do_warn)
 end
 """
     rebase!(ef::EconFrame, cpi::CPI, new_base_date)
@@ -216,6 +220,7 @@ Change the base date of real monetary variables in an EconFrame.
 - `ef`: EconFrame with monetary variables in real terms
 - `cpi` or `cpis`: Single CPI or vector of CPIs for different good types
 - `new_base_date`: New base date for real values (e.g., 1992)
+- `do_warn`: Whether to display warnings when the type of good does not match with the available CPIs (default: `true`)
 
 # Behavior with multiple CPIs
 When providing multiple CPIs:
@@ -233,9 +238,9 @@ rebase!(psid, cpi_general, 1992)
 rebase!(psid, [cpi_consumption, cpi_housing], 1992)
 ```
 """
-rebase!(ef::EconFrame, cpi::CPI, new_base_date)::Nothing = rebase!(ef, [cpi], new_base_date)
+rebase!(ef::EconFrame, cpi::CPI, new_base_date; do_warn::Bool=true)::Nothing = rebase!(ef, [cpi], new_base_date; do_warn)
 
-function rebase!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date)::Nothing
+function rebase!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date; do_warn::Bool=true)::Nothing
     
     # Get real variables
     mon_vars = ef |> list_monetary_variables
@@ -247,5 +252,5 @@ function rebase!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date)::Not
         @warn "The following monetary variables were skipped because they are not real: " * join(skipped_vars, ", ")
     end
 
-    return price_conversion!(ef, cpis, conversion_vars, rebase, new_base_date; operation_name = "rebase")
+    return price_conversion!(ef, cpis, conversion_vars, rebase, new_base_date; operation_name = "rebase", do_warn)
 end
