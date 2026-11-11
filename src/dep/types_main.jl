@@ -257,6 +257,10 @@ function Base.setproperty!(ef::EconFrame, s::Symbol, val)
     end
 end
 
+# CSV methods
+CSV.write(io::IO, ef::EconFrame; kwargs...) = CSV.write(io, ef.data; kwargs...)
+CSV.write(file::AbstractString, ef::EconFrame; kwargs...) = CSV.write(file, ef.data; kwargs...)
+
 # Metadata helpers
 _is_monetary(df::DataFrame, col::Symbol) = "is_monetary" in colmetadatakeys(df, col) && colmetadata(df, col, "is_monetary")
 _col_good_type(df::DataFrame, col::Symbol) = "good_type" in colmetadatakeys(df, col) ? colmetadata(df, col, "good_type") : AnyGood()
