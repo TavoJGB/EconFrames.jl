@@ -53,8 +53,12 @@ function assign_groups!(
     # Create bin labels
     bin_labels = create_bin_labels(thresholds; closed)
     
-    # Assign bins using searchsortedfirst
-    ef.data[!, bin_col] = [searchsortedfirst(thresholds, val) for val in ef.data[!, col]]
+    # Assign bins: closed=:left → [a,b), use searchsortedlast+1; closed=:right → (a,b], use searchsortedfirst
+    ef.data[!, bin_col] = if closed == :left
+        [searchsortedlast(thresholds, val) + 1 for val in ef.data[!, col]]
+    else
+        [searchsortedfirst(thresholds, val) for val in ef.data[!, col]]
+    end
     
     # Assign group labels
     ef.data[!, group_col] = [bin_labels[bin] for bin in ef.data[!, bin_col]]
@@ -86,24 +90,24 @@ create_bin_labels([25, 35, 45, 55, 65])
 # Returns: ["<25", "25-34", "35-44", "45-54", "55-64", "≥65"]
 
 create_bin_labels([0, 1000, 5000, 10000]; closed=:right)
-# Returns: ["<0", "0-999", "1000-4999", "5000-9999", "≥10000"]
+# Returns: ["≤0", "1-1000", "1001-5000", "5001-10000", ">10000"]
 ```
 """
 function create_bin_labels(thresholds::AbstractVector{<:Real}; closed::Symbol=:left)
     n = length(thresholds)
     n < 1 && throw(ArgumentError("Need at least one threshold"))
     
-    # Adjustment for closed interval
-    adj = closed == :left ? -1 : 0
-    
-    # Create middle groups
-    bin_labels = ["$(thresholds[i])-$(thresholds[i+1]+adj)" for i in 1:n-1]
-    
-    # Add lower bound
-    pushfirst!(bin_labels, "<$(thresholds[1])")
-    
-    # Add upper bound
-    push!(bin_labels, "≥$(thresholds[end])")
+    if closed == :left
+        # [a, b): lower included, upper excluded → display upper as (b-1)
+        bin_labels = ["$(thresholds[i])-$(thresholds[i+1]-1)" for i in 1:n-1]
+        pushfirst!(bin_labels, "<$(thresholds[1])")
+        push!(bin_labels, "≥$(thresholds[end])")
+    else  # :right
+        # (a, b]: lower excluded, upper included → display lower as (a+1)
+        bin_labels = ["$(thresholds[i]+1)-$(thresholds[i+1])" for i in 1:n-1]
+        pushfirst!(bin_labels, "≤$(thresholds[1])")
+        push!(bin_labels, ">$(thresholds[end])")
+    end
     
     return bin_labels
 end
