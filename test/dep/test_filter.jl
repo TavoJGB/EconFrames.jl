@@ -7,8 +7,8 @@ function test_filter_methods()
             income = [100.0, 200.0, 300.0, 400.0]
         )
 
-        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalUSD())
-        monetary_variable!(ef, :income)
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year)
+        monetary_variable!(ef, :income, NominalUSD())
 
         # Non-mutating filter with function first
         ef_filtered = filter(row -> !ismissing(row.hid_prev), ef)

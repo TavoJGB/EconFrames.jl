@@ -14,7 +14,6 @@ function test_combine_multiple_imputation_two_stage()
             Household(),
             Annual(),
             :year;
-            currency=NominalUSD(),
             weight_var=:weight,
             imputation_var=:imputation,
         )
@@ -49,7 +48,6 @@ function test_combine_single_imputation_passthrough()
             Household(),
             Annual(),
             :year;
-            currency=NominalUSD(),
             weight_var=:weight,
         )
 

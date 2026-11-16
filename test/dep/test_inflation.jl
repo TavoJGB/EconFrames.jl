@@ -8,31 +8,33 @@ function test_econframe_single_cpi()
             wealth = [120000.0, 135000.0, 150000.0, 165000.0, 180000.0]
         )
         
-        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalUSD())
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year)
         
         # Mark as monetary variables
-        monetary_variable!(ef, [:income, :wealth])
+        monetary_variable!(ef, [:income, :wealth], NominalUSD())
         
         # Create CPI
         cpi = CPI([1990, 1991, 1992, 1993, 1994], [100.0, 103.0, 106.5, 110.0, 115.0], AnyGood())
         
         # Convert to real
         to_real!(ef, cpi, 1990)
-        @test currency(ef) isa RealUSD{1990}
+        @test currency(ef.income) isa RealUSD{1990}
+        @test currency(ef.wealth) isa RealUSD{1990}
         @test ef.income[1] == 45000.0  # Base year unchanged
         @test ef.income[2] > 48000.0    # Deflated (real > nominal)
         
         # Convert back to nominal
         to_nominal!(ef, cpi)
-        @test currency(ef) isa NominalUSD
+        @test currency(ef.income) isa NominalUSD
+        @test currency(ef.wealth) isa NominalUSD
         @test ef.income[1] ≈ 45000.0 atol=1e-8
         @test ef.income[2] ≈ 48000.0 atol=1e-8
         
         # Rebase
         to_real!(ef, cpi, 1990)
         rebase!(ef, cpi, 1992)
-        @test currency(ef) isa RealUSD{1992}
-        @test base_date(currency(ef)) == 1992
+        @test currency(ef.income) isa RealUSD{1992}
+        @test base_date(currency(ef.income)) == 1992
     end
 end
 
@@ -46,10 +48,10 @@ function test_econframe_multiple_cpis()
             other_exp = [8000.0, 8200.0, 8500.0, 8800.0, 9000.0]
         )
         
-        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalUSD())
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year)
         
         # Mark as monetary variables with specific good types
-        monetary_variable!(ef, [:food_exp, :housing_exp, :other_exp])
+        monetary_variable!(ef, [:food_exp, :housing_exp, :other_exp], NominalUSD())
         colmetadata!(ef.data, :food_exp, "good_type", ConsumptionGood())
         colmetadata!(ef.data, :housing_exp, "good_type", Housing())
         colmetadata!(ef.data, :other_exp, "good_type", AnyGood())
@@ -71,7 +73,7 @@ function test_econframe_multiple_cpis()
         to_real!(ef, [cpi_consumption, cpi_housing, cpi_general], 1990)
         
         # Check conversions happened
-        @test currency(ef) isa RealUSD{1990}
+        @test currency(ef.food_exp) isa RealUSD{1990}
         @test ef.food_exp[2] != food_original[2]      # Deflated
         @test ef.housing_exp[2] != housing_original[2] # Deflated  
         @test ef.other_exp[2] != other_original[2]    # Deflated
@@ -83,7 +85,7 @@ function test_econframe_multiple_cpis()
         
         # Convert back to nominal
         to_nominal!(ef, [cpi_consumption, cpi_housing, cpi_general])
-        @test currency(ef) isa NominalUSD
+        @test currency(ef.food_exp) isa NominalUSD
         @test all(isapprox.(ef.food_exp, food_original, atol=1e-8))
         @test all(isapprox.(ef.housing_exp, housing_original, atol=1e-8))
         @test all(isapprox.(ef.other_exp, other_original, atol=1e-8))
@@ -100,10 +102,10 @@ function test_econframe_partial_matching()
             unmatched = [5000.0, 5200.0, 5400.0]
         )
         
-        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalUSD())
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year)
 
         # Mark variables with good types
-        monetary_variable!(ef, [:consumption, :housing, :unmatched])
+        monetary_variable!(ef, [:consumption, :housing, :unmatched], NominalUSD())
         colmetadata!(ef.data, :consumption, "good_type", ConsumptionGood())
         colmetadata!(ef.data, :housing, "good_type", Housing())
         colmetadata!(ef.data, :unmatched, "good_type", OtherGood())  # No CPI for this
@@ -118,7 +120,7 @@ function test_econframe_partial_matching()
         @test_logs (:warn, r"not converted") to_real!(ef, [cpi_consumption, cpi_housing], 1990)
         
         # Check that matched variables were converted
-        @test currency(ef) isa RealUSD{1990}
+        @test currency(ef.consumption) isa RealUSD{1990}
         
         # Check that unmatched variable has metadata
         @test "currency" in colmetadatakeys(ef.data, :unmatched)
@@ -133,21 +135,21 @@ function test_econframe_already_converted()
             income = [45000.0, 48000.0, 50000.0]
         )
         
-        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalUSD())
-        monetary_variable!(ef, :income)
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year)
+        monetary_variable!(ef, :income, NominalUSD())
         
         cpi = CPI([1990, 1991, 1992], [100.0, 103.0, 106.5], AnyGood())
         
         # First conversion - should succeed
         to_real!(ef, cpi, 1990)
-        @test currency(ef) isa RealUSD{1990}
+        @test currency(ef.income) isa RealUSD{1990}
         
         # Second conversion - should warn and do nothing
         @test_logs (:warn, r"already in real terms") to_real!(ef, cpi, 1990)
         
         # Try to_nominal on nominal - should warn
         to_nominal!(ef, cpi)
-        @test currency(ef) isa NominalUSD
+        @test currency(ef.income) isa NominalUSD
         @test_logs (:warn, r"not in real terms") to_nominal!(ef, cpi)
     end
 end
@@ -160,24 +162,22 @@ function test_column_level_to_real_assignment_updates_frame_currency()
             lab_income = [600.0, 630.0, 660.0]
         )
 
-        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
-        monetary_variable!(ef, [:income, :lab_income])
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year)
+        monetary_variable!(ef, [:income, :lab_income], NominalEUR())
 
-        cpi = CPI([2007, 2008, 2009], [98.0, 100.0, 103.0], AnyGood())
+        cpi = CPI([2007, 2008, 2009, 2010], [98.0, 100.0, 103.0, 106.0], AnyGood())
 
         lab_income_before = copy(ef.lab_income)
 
         ef.income = to_real(ef.income, cpi, ef.year, 2008)
         income_after_first_conversion = copy(ef.income)
 
-        @test currency(ef) isa NominalEUR
         @test currency(ef.income) isa RealEUR{2008}
         @test currency(ef.lab_income) isa NominalEUR
         @test all(isapprox.(ef.lab_income, lab_income_before, atol=1e-8))
 
         to_real!(ef, [cpi], 2008)
 
-        @test currency(ef) isa RealEUR{2008}
         @test currency(ef.income) isa RealEUR{2008}
         @test currency(ef.lab_income) isa RealEUR{2008}
         @test all(isapprox.(ef.income, income_after_first_conversion, atol=1e-8))
@@ -193,10 +193,10 @@ function test_frame_level_to_nominal_and_rebase_respect_column_currency()
             lab_income = [600.0, 630.0, 660.0]
         )
 
-        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
-        monetary_variable!(ef, [:income, :lab_income])
+        ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year)
+        monetary_variable!(ef, [:income, :lab_income], NominalEUR())
 
-        cpi = CPI([2007, 2008, 2009], [98.0, 100.0, 103.0], AnyGood())
+        cpi = CPI([2007, 2008, 2009, 2010], [98.0, 100.0, 103.0, 106.0], AnyGood())
 
         # Put both columns in real 2008.
         to_real!(ef, [cpi], 2008)
@@ -204,7 +204,7 @@ function test_frame_level_to_nominal_and_rebase_respect_column_currency()
         @test currency(ef.lab_income) isa RealEUR{2008}
 
         # Convert one column back to nominal at column-level.
-        ef.income = to_nominal(ef.income, cpi, 2008, ef.year)
+        ef.income = to_nominal(ef.income, cpi, ef.year)
         income_after_nominal = copy(ef.income)
         lab_income_real2008 = copy(ef.lab_income)
 
@@ -220,7 +220,7 @@ function test_frame_level_to_nominal_and_rebase_respect_column_currency()
 
         # Build mixed real-base state: income already rebased to 2010, lab_income at 2008.
         ef.income = to_real(ef.income, cpi, ef.year, 2008)
-        ef.income = rebase(ef.income, cpi, 2008, 2010)
+        ef.income = rebase(ef.income, cpi, 2010)
         ef.lab_income = to_real(ef.lab_income, cpi, ef.year, 2008)
 
         income_real2010 = copy(ef.income)

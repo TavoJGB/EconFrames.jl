@@ -86,7 +86,7 @@ version = "0.9.5"
 deps = ["CSV", "DataFrames", "Dates", "EconStats", "EconVariables", "Parameters", "Reexport", "StatsBase"]
 path = "."
 uuid = "d0f1779d-20ea-47f6-8e33-fa6a588e0d79"
-version = "1.0.3-DEV"
+version = "1.0.4"
 
 [[deps.EconStats]]
 deps = ["StatsBase"]
@@ -96,9 +96,9 @@ version = "1.0.0-DEV"
 
 [[deps.EconVariables]]
 deps = ["Dates", "EconStats", "Parameters", "StatsBase"]
-git-tree-sha1 = "5aad55fa648c2907b82916b9b02e236bc4128dc1"
+path = "C:/Users/gusga/Documents/GitHub/Julia/EconVariables"
 uuid = "f1f4d348-8162-412b-9f52-fe17ce20fcd0"
-version = "1.0.0-DEV"
+version = "1.0.1-DEV"
 
 [[deps.FilePathsBase]]
 deps = ["Compat", "Dates"]

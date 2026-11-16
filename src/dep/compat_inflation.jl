@@ -35,7 +35,7 @@ function variable_currency(ef::EconFrame, var::String)
     return if "currency" in colmetadatakeys(ef.data, var)
         colmetadata(ef.data, var, "currency")
     else
-        currency(ef)
+        EconVariables.NACurrency()
     end
 end
 
@@ -69,9 +69,8 @@ function price_conversion!(
     # Build CPI dictionary
     cpi_dict, anygood_cpi = build_cpi_dict(cpis)
     
-    # Preliminaries
-    all_mon_vars = list_monetary_variables(ef)
     unconverted_vars = String[]
+    new_currencies = Dict{String, Currency}()
     
     # Save column metadata (can be lost during broadcast assignment)
     saved_meta = df_save_metadata(ef)
@@ -83,20 +82,25 @@ function price_conversion!(
         if !isnothing(matching_cpi)
             converted = conversion_fn(getproperty(ef, Symbol(var)), matching_cpi, args...; kwargs...)
             setproperty!(ef, Symbol(var), converted)
+            new_currencies[var] = currency(converted)
         else
             push!(unconverted_vars, var)
         end
     end
     
-    # Warnings and update currency
+    # Warnings
     if length(unconverted_vars) == length(conversion_vars)
         @warn("No monetary variables were converted in $operation_name.")
     else
         !isempty(unconverted_vars) && @warn("The following variables were not converted in $operation_name (no matching CPI found): $(unconverted_vars)")
     end
     
-    # Restore column metadata (may have been lost during broadcast assignment)
+    # Restore column metadata (may have been lost during broadcast assignment),
+    # then re-apply the updated currency values that the restore would have reverted.
     df_restore_metadata!(ef, saved_meta)
+    for (var, curr) in new_currencies
+        colmetadata!(ef.data, var, "currency", curr; style=:note)
+    end
     
     return nothing
 end
@@ -155,10 +159,15 @@ function to_real!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date; do_
     mon_vars = ef |> list_monetary_variables
     conversion_vars = mon_vars[[is_nominal_col(ef, col) for col in mon_vars]]
 
-    # Warn about skipped variables
+    if isempty(conversion_vars)
+        @warn "All monetary variables are already in real terms."
+        return nothing
+    end
+
+    # Warn about skipped variables (already real)
     skipped_vars = setdiff(mon_vars, conversion_vars)
     if !isempty(skipped_vars)
-        @warn "The following monetary variables were skipped because they are not real: " * join(skipped_vars, ", ")
+        @warn "The following monetary variables were skipped because they are not nominal: " * join(skipped_vars, ", ")
     end
 
     # Returns
@@ -202,10 +211,15 @@ function to_nominal!(ef::EconFrame, cpis::AbstractVector{<:CPI}; do_warn::Bool=t
     mon_vars = ef |> list_monetary_variables
     conversion_vars = mon_vars[[is_real_col(ef, col) for col in mon_vars]]
 
-    # Warn about skipped variables
+    if isempty(conversion_vars)
+        @warn "All monetary variables are not in real terms."
+        return nothing
+    end
+
+    # Warn about skipped variables (already nominal)
     skipped_vars = setdiff(mon_vars, conversion_vars)
     if !isempty(skipped_vars)
-        @warn "The following monetary variables were skipped because they are not real: " * join(skipped_vars, ", ")
+        @warn "The following monetary variables were skipped because they are not in real terms: " * join(skipped_vars, ", ")
     end
     
     return price_conversion!(ef, cpis, conversion_vars, to_nominal, dates; operation_name = "to_nominal", do_warn)

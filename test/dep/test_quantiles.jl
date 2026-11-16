@@ -7,7 +7,7 @@ function test_assign_quantiles_range_labels()
         )
 
         ef = EconRepeatedCrossSection(df, TestSource(), Household(), Annual(), :year;
-                                      currency=NominalUSD(), weight_var=:weight)
+                                      weight_var=:weight)
 
         quants = [0.20, 0.40, 0.60, 0.80]
         assign_quantiles!(ef, :wealth_a, quants; by=[:year], col_name="liqwth")

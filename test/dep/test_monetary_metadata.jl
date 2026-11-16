@@ -7,8 +7,8 @@ function test_monetary_metadata_persistence()
             lab_income_inkind = ["10.0", "20.0"],
         )
 
-        ef = EconRepeatedCrossSection(df, TestSource(), Individual(), Annual(), :year; currency=NominalEUR())
-        monetary_variable!(ef, [:lab_income_direct, :lab_income_inkind], AnyGood())
+        ef = EconRepeatedCrossSection(df, TestSource(), Individual(), Annual(), :year)
+        monetary_variable!(ef, [:lab_income_direct, :lab_income_inkind], NominalEUR(), AnyGood())
 
         ef.lab_income = @. ef.lab_income_direct + ef.lab_income_inkind
 
@@ -39,11 +39,11 @@ function test_collapse_preserves_monetary_metadata()
             weight = [1.0, 1.0],
         )
 
-        ef_ii = EconRepeatedCrossSection(ii_df, TestSource(), Individual(), Annual(), :year; currency=NominalEUR())
-        ef_hh = EconRepeatedCrossSection(hh_df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
+        ef_ii = EconRepeatedCrossSection(ii_df, TestSource(), Individual(), Annual(), :year)
+        ef_hh = EconRepeatedCrossSection(hh_df, TestSource(), Household(), Annual(), :year)
 
-        monetary_variable!(ef_ii, :lab_income, AnyGood())
-        monetary_variable!(ef_hh, :wealth, AnyGood())
+        monetary_variable!(ef_ii, :lab_income, NominalEUR(), AnyGood())
+        monetary_variable!(ef_hh, :wealth, NominalEUR(), AnyGood())
 
         es = EconSet(Dict(:ii => ef_ii, :hh => ef_hh), (:ii, :hh) => [:year, :hid, :imputation])
         out = collapse(es, :hh, :ii, :lab_income => sum => :lab_income, :age => only_head)
@@ -69,8 +69,8 @@ function test_collapse_dropmissing_new_variables()
             weight = [1.0, 1.0],
         )
 
-        ef_ii = EconRepeatedCrossSection(ii_df, TestSource(), Individual(), Annual(), :year; currency=NominalEUR())
-        ef_hh = EconRepeatedCrossSection(hh_df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
+        ef_ii = EconRepeatedCrossSection(ii_df, TestSource(), Individual(), Annual(), :year)
+        ef_hh = EconRepeatedCrossSection(hh_df, TestSource(), Household(), Annual(), :year)
 
         es = EconSet(Dict(:ii => ef_ii, :hh => ef_hh), (:ii, :hh) => [:year, :hid, :imputation])
 
@@ -102,8 +102,8 @@ function test_collapse_only_head_with_output_name()
             weight = [1.0, 1.0],
         )
 
-        ef_ii = EconRepeatedCrossSection(ii_df, TestSource(), Individual(), Annual(), :year; currency=NominalEUR())
-        ef_hh = EconRepeatedCrossSection(hh_df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
+        ef_ii = EconRepeatedCrossSection(ii_df, TestSource(), Individual(), Annual(), :year)
+        ef_hh = EconRepeatedCrossSection(hh_df, TestSource(), Household(), Annual(), :year)
 
         es = EconSet(Dict(:ii => ef_ii, :hh => ef_hh), (:ii, :hh) => [:year, :hid, :imputation])
         out = collapse(es, :hh, :ii, :age => only_head => :age_head)
@@ -131,9 +131,9 @@ function test_getindex_single_column_returns_vector()
             weight = [1.0, 1.0],
         )
 
-        ef_rcs = EconRepeatedCrossSection(rcs_df, TestSource(), Household(), Annual(), :year; currency=NominalEUR())
-        ef_panel = EconPanel(panel_df, TestSource(), Household(), Annual(), :year, :id; currency=NominalEUR())
-        ef_cs = EconCrossSection(cs_df, TestSource(), Household(), Date(2008, 1, 1); currency=NominalEUR())
+        ef_rcs = EconRepeatedCrossSection(rcs_df, TestSource(), Household(), Annual(), :year)
+        ef_panel = EconPanel(panel_df, TestSource(), Household(), Annual(), :year, :id)
+        ef_cs = EconCrossSection(cs_df, TestSource(), Household(), Date(2008, 1, 1))
 
         @test ef_rcs[!, :income] == ef_rcs.data[!, :income]
         @test ef_panel[!, :income] == ef_panel.data[!, :income]
