@@ -6,7 +6,9 @@ module EconFrames
         EXTERNAL DEPENDENCIES
     ==========================================================================#
 
-    using CSV, DataFrames
+    using CSV
+    using Reexport                      # @reexport
+    @reexport using DataFrames
     using Dates
     using Parameters        # unpack
 
@@ -16,7 +18,6 @@ module EconFrames
         LOCAL DEPENDENCIES
     ==========================================================================#
 
-    using Reexport                      # @reexport
     @reexport using EconStats           # statistics
     @reexport using EconVariables       # vectors with economic metadata
         import EconVariables: currency_string
@@ -47,6 +48,6 @@ module EconFrames
     include(joinpath(BASE_FOLDER, "src", "dep", "compat_inflation.jl"))
         export to_real!, to_nominal!, rebase!
     include(joinpath(BASE_FOLDER, "src", "dep", "groups.jl"))
-        export assign_groups!, groupby!, assign_quantiles!, combine
+        export assign_groups!, groupby!, assign_quantiles!
 
 end
