@@ -49,5 +49,6 @@ module EconFrames
         export to_real!, to_nominal!, rebase!
     include(joinpath(BASE_FOLDER, "src", "dep", "groups.jl"))
         export assign_groups!, groupby!, assign_quantiles!
+    include(joinpath(BASE_FOLDER, "src", "dep", "compat_dataframes.jl"))
 
 end
