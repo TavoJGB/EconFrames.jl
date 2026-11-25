@@ -103,10 +103,11 @@ function monetary_variable!(
     return nothing
 end
 function monetary_variable!(
-    ef::EconFrame, cols::AbstractVector{Symbol}, curr::Currency, good_type::GoodType=AnyGood()
+    ef::EconFrame, cols::AbstractVector{Symbol}, curr::Currency, good_type::GoodType=AnyGood();
+    do_parse::Bool=true
 )::Nothing
     # Parse first so later column replacement does not wipe metadata set on earlier columns.
-    for col in cols
+    do_parse && for col in cols
         if !(eltype(ef.data[!, col]) <: Real)
             ef.data[!, col] = parse.(Float64, string.(ef.data[!, col]))
         end
@@ -118,10 +119,11 @@ function monetary_variable!(
     return nothing
 end
 function monetary_variable!(
-    ef::EconFrame, cols::AbstractVector{<:Symbol}, curr::Currency, good_types::Vector{<:GoodType}
+    ef::EconFrame, cols::AbstractVector{<:Symbol}, curr::Currency, good_types::Vector{<:GoodType};
+    do_parse::Bool=true
 )::Nothing
     # Parse first so later column replacement does not wipe metadata set on earlier columns.
-    for col in cols
+    do_parse && for col in cols
         if !(eltype(ef.data[!, col]) <: Real)
             ef.data[!, col] = parse.(Float64, string.(ef.data[!, col]))
         end

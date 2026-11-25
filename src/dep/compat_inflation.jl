@@ -114,6 +114,18 @@ end
 is_nominal_col(ef::EconFrame, col::Union{Symbol, String}) = colmetadata(ef, col)["currency"] isa NominalCurrency
 is_real_col(ef::EconFrame, col::Union{Symbol, String}) = colmetadata(ef, col)["currency"] isa RealCurrency
 
+function is_real_col_at_base(ef::EconFrame, col::Union{Symbol, String}, base_date)
+    curr = colmetadata(ef, col)["currency"]
+    curr isa RealCurrency || return false
+    curr_base = EconVariables.base_date(curr)
+    curr_base == base_date && return true
+    try
+        return Date(curr_base) == Date(base_date)
+    catch
+        return false
+    end
+end
+
 
 
 #==========================================================================
@@ -139,7 +151,9 @@ When providing multiple CPIs:
    - Variables with good type Tg are converted with CPI of type Tg
    - Variables without matching CPI are converted with AnyGood CPI (if available)
    - Variables without any matching CPI remain unconverted (warning issued)
-3. Frame currency is updated to real currency with new base date
+3. Nominal variables are converted to real values.
+4. Real variables with a different base date are rebased.
+5. Real variables already at the requested base date are left unchanged.
 
 # Examples
 ```julia
@@ -155,24 +169,51 @@ to_real!(ef::EconFrame, cpi::CPI, new_base_date; do_warn::Bool=true)::Nothing = 
 function to_real!(ef::EconFrame, cpis::AbstractVector{<:CPI}, new_base_date; do_warn::Bool=true)::Nothing    
     dates = get_dates(ef)
     
-    # Get nominal variables
+    # Get the list of monetary variables in the EconFrame
     mon_vars = ef |> list_monetary_variables
-    conversion_vars = mon_vars[[is_nominal_col(ef, col) for col in mon_vars]]
-
-    if isempty(conversion_vars)
-        @warn "All monetary variables are already in real terms."
+    if isempty(mon_vars)
+        @warn "No monetary variables found in the EconFrame."
         return nothing
     end
 
-    # Warn about skipped variables (already real)
-    skipped_vars = setdiff(mon_vars, conversion_vars)
-    if !isempty(skipped_vars)
-        @warn "The following monetary variables were skipped because they are not nominal: " * join(skipped_vars, ", ")
+    # Partition monetary variables by currency and base date
+    nominal_vars = String[]
+    mismatched_real_vars = String[]
+    already_real_vars = String[]
+    for col in mon_vars
+        if is_nominal_col(ef, col)
+            push!(nominal_vars, col)
+        elseif is_real_col(ef, col)
+            if is_real_col_at_base(ef, col, new_base_date)
+                push!(already_real_vars, col)
+            else
+                push!(mismatched_real_vars, col)
+            end
+        end
     end
 
-    # Returns
-    return price_conversion!(ef, cpis, conversion_vars, to_real, dates, new_base_date; operation_name = "to_real", do_warn)
+    # Nominal to real
+    if !isempty(nominal_vars)
+        price_conversion!(ef, cpis, nominal_vars, to_real, dates, new_base_date; operation_name = "to_real", do_warn)
+    end
+
+    # Rebase real variables with mismatched base date
+    if !isempty(mismatched_real_vars)
+        price_conversion!(ef, cpis, mismatched_real_vars, rebase, new_base_date; operation_name = "rebase", do_warn)
+    end
+
+    # Warnings
+    if !isempty(already_real_vars)
+        if isempty(nominal_vars) && isempty(mismatched_real_vars)
+            @warn "All monetary variables are already in real terms."
+        else
+            @warn "The following monetary variables are already in real terms at the requested base date: " * join(already_real_vars, ", ")
+        end
+    end
+
+    return nothing
 end
+
 """
     to_nominal!(ef::EconFrame, cpi::CPI)
     to_nominal!(ef::EconFrame, cpis::AbstractVector{<:CPI})
