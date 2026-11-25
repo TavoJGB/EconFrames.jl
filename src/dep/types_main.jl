@@ -93,7 +93,7 @@ function monetary_variable!(
 )::Nothing
     # Ensure column contains Real numbers
     if !(eltype(ef.data[!, col]) <: Real) & do_parse
-        ef.data[!, col] = parse.(Float64, string.(ef.data[!, col]))
+        ef.data[!, col] = passmissing(parse).(Float64, ef.data[!, col])
     end
     # Set metadata
     colmetadata!(ef.data, col, "is_monetary", true; style=:note)
@@ -108,8 +108,8 @@ function monetary_variable!(
 )::Nothing
     # Parse first so later column replacement does not wipe metadata set on earlier columns.
     do_parse && for col in cols
-        if !(eltype(ef.data[!, col]) <: Real)
-            ef.data[!, col] = parse.(Float64, string.(ef.data[!, col]))
+        if !(eltype(ef.data[!, col]) <: Union{Missing,<:Real})
+            ef.data[!, col] = passmissing(parse).(Float64, ef.data[!, col])
         end
     end
     # Mark monetary variables
@@ -124,8 +124,8 @@ function monetary_variable!(
 )::Nothing
     # Parse first so later column replacement does not wipe metadata set on earlier columns.
     do_parse && for col in cols
-        if !(eltype(ef.data[!, col]) <: Real)
-            ef.data[!, col] = parse.(Float64, string.(ef.data[!, col]))
+        if !(eltype(ef.data[!, col]) <: Union{Missing,<:Real})
+            ef.data[!, col] = passmissing(parse).(Float64, ef.data[!, col])
         end
     end
     # Mark monetary variables
